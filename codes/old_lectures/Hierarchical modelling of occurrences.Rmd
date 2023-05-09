@@ -1,0 +1,311 @@
+---
+title: "Dynamic occupancy model of MacKenzie et. al (2003)"
+author: "Daniel Sol"
+date: "20/8/2017"
+output: html_document
+---
+
+# Example 1
+
+Let's imagine we want to assess how the likelihood of colonisation and emigration affects colony growth in jackdaws. We also want to model cases where a couple abandoned their breeding attempt. And all this is done over time. We can do this with the package "unmarked".
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("unmarked")
+library("AHMbook")
+
+```
+
+We first will prepare the data. We need a data structure in which each row is a nest (R) from a tower, columns are presence/absences within (J=2, as we will model whether laying individuals either rise fledgings or abandon them) and across years (T). We subsequently will add predictors, but right now we will only estimate 1) the initial probability of occupancy at each site (psiformula), colonization probability (gammaformula) and site abandonment probability (epsilonformula). We will also estimate detectability, reflecting within year changes site abandonment.
+
+
+```{r}
+
+setwd("/Users/d.sol/ownCloud2/Science/R sources/Examples/Hierarchical occupation models")
+dat <- read.table("Example_nest_occupacy.txt", h=T)
+
+R <- 20 # number of sites
+J <- 2 # number of secondary sampling occasions
+T <- 3 # number of primary periods
+
+dat1 <- unmarkedMultFrame(dat, numPrimary=3)  # Number of primary time periods (seasons in the multiseason model
+dat1
+
+m0 <- colext(~1, ~1, ~1, ~1, dat1)
+summary(m0)
+
+```
+
+
+Note that all parameters were estimated on the logit scale. To back-transform to the original scale, we can simply use the inverse-logit function, named plogis in R, or use backTransform.
+
+
+```{r}
+
+plogis(-0.39)
+
+names(m0)
+backTransform(m0, type="psi")
+backTransform(m0, type="col")
+backTransform(m0, type="ext")
+backTransform(m0, type="det")
+
+```
+
+
+Next, we fit the dynamic occupancy model with full year-dependence in the parameters describing colonisation, which is the only one that varies.
+
+```{r}
+
+year <- matrix(c('1998','1999','2000'), nrow(dat), T, byrow=TRUE)  # create a matrix indicating the year each site was surveyed.
+
+dat2 <- unmarkedMultFrame(dat, yearlySiteCovs = list(year = year), numPrimary=3)  # Number of primary time periods (seasons in the multiseason model
+dat2
+summary(dat2)
+
+m1 <- colext(psiformula = ~1,   # First-year occupancy
+         gammaformula = ~year-1,    # Colonization
+         epsilonformula = ~1,  # Extinction
+         pformula = ~1,        # Detection
+         data = dat2)
+summary(m1)
+
+```
+
+
+Back-transforming estimates when covariates, such as year, are present involves an extra step. Specifically, we need to tell unmarked the values of our covariate at which we want an estimate. This can be done using backTransform in combination with linearComb, although it can be easier to use predict. predict allows the user to supply a data.frame in which each row represents a combination of covariate values of interest.
+
+
+```{r}
+nd <- data.frame(year=c('1998','1999')) # note that we exclude one of the years because there are T-1 colonisations (the same for extinctions, yet for detectability this is not required)
+E.col <- predict(m1, type='col', newdata=nd)
+
+
+
+with(E.col, {        # Plot for colonization probability
+plot(1:2, Predicted, pch=1, xaxt='n', xlab='Year', ylab=expression(paste('Colonization probability ( ', gamma, ' )')), ylim=c(0,1), col=4)
+axis(1, at=1:2, labels=nd$year[1:2])
+arrows(1:2, lower, 1:2, upper, code=3, angle=90, length=0.03, col=4) 
+})
+  
+```
+
+
+Now we present an example based on simulated data to show how to model predictors of occurrence, colonization and extinction porobabilities. To simulate the data, we execute the following R code developed by Kery. The actual values for these parameters for each year are drawn randomly from a uniform distribution with the specified bounds.
+
+We first run a full example and then we will move to unmarked. The data is generated as follows.
+
+```{r}
+
+M <- 250
+ J <- 3
+ T <- 10
+ psi <- rep(NA, T)
+ muZ <- z <- array(dim = c(M, T))
+ y <- array(NA, dim = c(M, J, T))
+ set.seed(13973)
+ psi[1] <- 0.4
+ p <- c(0.3,0.4,0.5,0.5,0.1,0.3,0.5,0.5,0.6,0.2)
+ phi <- runif(n=T-1, min=0.6, max=0.8)   # Survival probability (1-epsilon)
+
+ gamma <- runif(n=T-1, min=0.1, max=0.2) # Colonization probability
+ # Generate latent states of occurrence
+ # First year
+ z[,1] <- rbinom(M, 1, psi[1])
+     # Later years
+     for(i in 1:M){
+        for(k in 2:T){
+           muZ[k] <- z[i, k-1]*phi[k-1] + (1-z[i, k-1])*gamma[k-1]
+           z[i,k] <- rbinom(1, 1, muZ[k])
+} } 
+     # Generate detection/non-detection data
+     for(i in 1:M){
+        for(k in 1:T){
+           prob <- z[i,k] * p[k]
+           for(j in 1:J){
+              y[i,j,k] <- rbinom(1, 1, prob)
+           }
+} } 
+
+
+
+```
+
+Now we present a single realization of the model above defined. The figure illustrates the fundamental issue of imperfect detection — the actual proportion of sites occupied differs greatly from the observed proportion of sites occupied, and because p varies among years, the observed data cannot be used as a valid index of the parameter of interest ψi.
+
+```{r}
+for (k in 2:T){
+        psi[k] <- psi[k-1]*phi[k-1] + (1-psi[k-1])*gamma[k-1]
+        }
+
+    plot(1:T, colMeans(z), type = "b", xlab = "Year",
+          ylab = "Proportion of sites occupied",
+          col = "black", xlim=c(0.5, 10.5), xaxp=c(1,10,9),
+          ylim = c(0,0.6), lwd = 2, lty = 1,
+          frame.plot = FALSE, las = 1, pch=16)
+    psi.app <- colMeans(apply(y, c(1,3), max))
+    lines(1:T, psi.app, type = "b", col = "blue", lty=3, lwd = 2)
+    legend(1, 0.6, c("truth", "observed"),
+            col=c("black", "blue"), lty=c(1,3), pch=c(16,1))
+```
+
+Now we move to unmarked. We first need to reformat the data to make it suitable for unmarked.
+
+```{r}
+yy <- matrix(y, M, J*T)   # reformats the detection/non-detection data from a 3-dimensional array (as generated) into a 2-dimensional matrix with M rows.
+
+year <- matrix(c('01','02','03','04','05','06','07','08','09','10'), nrow(yy), T, byrow=TRUE)   # create a matrix indicating the year each site was surveyed.
+
+simUMF <- unmarkedMultFrame(
+     y = yy,
+     yearlySiteCovs = list(year = year),
+     numPrimary=T)
+summary(simUMF)
+ 
+
+```
+
+
+# Example 2
+
+Now we fit a few dynamic occupancy models. We will fit a model with constant values for all parameters and another with full time-dependence for colonization, extinction and detection probability.
+
+```{r}
+# Model with all constant parameters
+m0 <- colext(psiformula= ~1, gammaformula = ~ 1, epsilonformula = ~ 1, pformula = ~ 1, data = simUMF, method="BFGS")
+summary(m0)
+
+names(m0)
+backTransform(m0, type="psi")
+
+```
+
+
+Next, we fit the dynamic occupancy model with full year-dependence in the parameters describing occupancy dynamics and also in detection. This is the same model under which we generated the data set, so we would expect accurate estimates. By default in R, a factor such as year in this analysis, is a parameterized in terms of an intercept and effects representing differences. This would mean that the parameter for the first year is the intercept and the effects would denote the differences between the parameter values in all other years, relative to the parameter value in the first year, which serves as a reference level. This treatment or effects parameterization is useful for testing for differences. For simple presentation, a means parameterization is more practical. It can be specified by adding a -1 to the formula for the time-dependent parameters.
+
+
+```{r}
+m1 <- colext(psiformula = ~1,   # First-year occupancy
+         gammaformula = ~ year-1,    # Colonization
+         epsilonformula = ~ year-1,  # Extinction
+         pformula = ~ year-1,        # Detection
+         data = simUMF)
+m1 
+
+```
+
+
+And we plot the results.Back-transforming estimates when covariates, such as year, are present involves an extra step. Specifically, we need to tell unmarked the values of our covariate at which we want an estimate. This can be done using backTransform in combination with linearComb, although it can be easier to use predict. predict allows the user to supply a data.frame in which each row represents a combination of covariate values of interest. Below, we create data.frames called nd with each row representing a year. Then we request yearly estimates of the probability of extinction, colonization and detection, and compare them to “truth”, i.e., the values with which we simulated the data set. Note that there are T-1 extinction and colonization parameters in this case, so we do not need to include year ‘10’ in nd. Figure shows that the 95% confidence intervals include the true parameter values, and the point estimates are not too far off.
+
+```{r}
+nd <- data.frame(year=c('01','02','03','04','05','06','07','08','09'))  
+E.ext <- predict(m1, type='ext', newdata=nd) 
+E.col <- predict(m1, type='col', newdata=nd)
+ 
+nd <- data.frame(year=c('01','02','03','04','05','06','07','08','09','10')) 
+E.det <- predict(m1, type='det', newdata=nd) 
+# Predict returns the predictions along with standard errors and confidence intervals. These can be used to create plots. The with function is used to simplify the process of requesting the columns of data.frame returned by predict. 
+     op <- par(mfrow=c(3,1), mai=c(0.6, 0.6, 0.1, 0.1))
+     with(E.ext, {   # Plot for extinction probability
+plot(1:9, Predicted, pch=1, xaxt='n', xlab='Year', ylab=expression(paste('Extinction probability ( ', epsilon, ' )')), ylim=c(0,1), col=4)
+axis(1, at=1:9, labels=nd$year[1:9])
+arrows(1:9, lower, 1:9, upper, code=3, angle=90, length=0.03, col=4) 
+points((1:9)-0.1, 1-phi, col=1, lwd = 1, pch=16)
+legend(7, 1, c('Parameter', 'Estimate'), col=c(1,4), pch=c(16, 1), cex=0.8) 
+       })
+
+
+     with(E.col, {        # Plot for colonization probability
+plot(1:9, Predicted, pch=1, xaxt='n', xlab='Year', ylab=expression(paste('Colonization probability ( ', gamma, ' )')), ylim=c(0,1), col=4) 
+axis(1, at=1:9, labels=nd$year[1:9])
+arrows(1:9, lower, 1:9, upper, code=3, angle=90, length=0.03, col=4) 
+points((1:9)-0.1, gamma, col=1, lwd = 1, pch=16)
+legend(7, 1, c('Parameter', 'Estimate'), col=c(1,4), pch=c(16, 1), cex=0.8) 
+       })
+    
+ with(E.det, {   # Plot for detection probability: note 10 years
+plot(1:10, Predicted, pch=1, xaxt='n', xlab='Year', ylab=expression(paste('Detection probability ( ', p, ' )')), ylim=c(0,1), col=4) 
+axis(1, at=1:10, labels=nd$year)
+arrows(1:10, lower, 1:10, upper, code=3, angle=90, length=0.03, col=4) 
+points((1:10)-0.1, p, col=1, lwd = 1, pch=16)
+legend(7.5, 1, c('Parameter','Estimate'), col=c(1,4), pch=c(16, 1), cex=0.8)
+})
+  
+
+   par(op)
+
+```
+
+We can also estimate occupancy probability in years T > 1 and associated confidence intervals as follows. 
+In practice, B should be much higher, possibly > 1000 for complex models. unmarked does this automatically in two ways. First, the population-level estimates of occupancy probability ψt = ψt−1φt−1 + (1 − φt−1)γ are calculated and stored in the slot named projected. Slots can be accessed using the @ operator, e.g. fm@projected. In some cases, interest may lie in making inference about the proportion of the sampled sites that are occupied, rather than the entire population of sites. These estimates are contained in the smoothed slot of the fitted model.
+
+```{r}
+
+m1 <- nonparboot(m1, B = 10)
+cbind(psi=psi, smoothed=smoothed(m1)[2,], SE=m1@smoothed.mean.bsse[2,])
+
+```
+
+
+Another derived parameters of interest is turnover probability.
+
+```{r}
+ turnover <- function(fm) {
+         psi.hat <- plogis(coef(fm, type="psi"))
+         if(length(psi.hat) > 1)
+             stop("this function only works if psi is scalar")
+         T <- getData(fm)@numPrimary
+         tau.hat <- numeric(T-1)
+         gamma.hat <- plogis(coef(fm, type="col"))
+                  phi.hat <- 1 - plogis(coef(fm, type="ext"))
+         if(length(gamma.hat) != T-1 | length(phi.hat) != T-1)
+             stop("this function only works if gamma and phi T-1 vectors")
+         for(t in 2:T) {
+             psi.hat[t] <- psi.hat[t-1]*phi.hat[t-1] +
+                 (1-psi.hat[t-1])*gamma.hat[t-1]
+             tau.hat[t-1] <- gamma.hat[t-1]*(1-psi.hat[t-1]) / psi.hat[t]
+             }
+         return(tau.hat)
+ }
+
+pb <- parboot(m1, statistic=turnover, nsim=2)
+turnCI <- cbind(pb@t0,
+         t(apply(pb@t.star, 2, quantile, probs=c(0.025, 0.975))))
+colnames(turnCI) <- c("tau", "lower", "upper")
+turnCI
+ 
+
+```
+
+
+In addition to estimating the variance of an estimate, the parametric bootstrap can be used to assess goodness-of-fit.
+
+
+```{r}
+chisq <- function(fm) {
+         umf <- getData(fm)
+         y <- getY(umf)
+         sr <- fm@sitesRemoved
+         if(length(sr)>0)
+             y <- y[-sr,,drop=FALSE]
+         fv <- fitted(fm, na.rm=TRUE)
+         y[is.na(fv)] <- NA
+         sum((y-fv)^2/(fv*(1-fv)))
+         }
+set.seed(344)
+pb.gof.m0 <- parboot(m0, statistic=chisq, nsim=100)
+pb.gof.m0
+
+pb.gof.m1 <- parboot(m1, statistic=chisq, nsim=100)
+pb.gof.m1
+```
+
+References
+
+MacKenzie, D.I. et al. (2002) Estimating Site Occupancy Rates When Detection Probabilities Are Less Than One. Ecology, 83(8), 2248-2255.
+
+MacKenzie, D. I., J. D. Nichols, J. E. Hines, M. G. Knutson, and A. B. Franklin. 2003. Estimating site occupancy, colonization, and local extinction when a species is detected imperfectly. Ecology 84:2200–2207.
+
+MacKenzie, D. I. et al. (2006) Occupancy Estimation and Modeling.Amsterdam: Academic Press.
+
+Weir L. A., Fiske I. J., Royle J. (2009) Trends in Anuran Occupancy from Northeastern States of the North American Amphibian Monitoring Program. Herpetological Conservation and Biology. 4(3):389-402.
