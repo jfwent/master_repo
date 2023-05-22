@@ -9,14 +9,16 @@ library(tibble); library(purrr); library(dplyr); library(tidyr)
 
 #  Data: Load, Clean up, Merge --------------------------------------------
 
-bbs_filt_AOU <- read.delim("data/Lica/bbs.filt.AOU.txt", sep="")
+bbs_filt_AOU <- read.delim("/Users/jonwent/polybox/Master thesis/bbs.filt.AOU.txt", sep="")
 save(bbs_filt_AOU, file = "bbs_filt_AOU.rda")
-BBS_partition_abundance <- read.delim("data/Lica/BBS.partition.abundance.txt", sep="")
+BBS_partition_abundance <- read.delim("/Users/jonwent/polybox/Master thesis/BBS.partition.abundance.txt", sep="")
 save(BBS_partition_abundance, file = "BBS_partition_abundance.rda")
+BBS_land_years <- read.delim("/Users/jonwent/polybox/Master thesis/BBS.land.years.txt", sep="")
+save(BBS_land_years, file = "BBS_land_years.rda")
 
 # Load and convert to tibble for easier management
-load('data/Lica/bbs_land_years.rda')
-land <- as_tibble(bbs_land_years); rm(bbs_land_years)
+load('data/Lica/BBS_land_years.rda')
+land <- as_tibble(BBS_land_years); rm(bbs_land_years)
 ecoreg <- as_tibble(read.delim('data/Lica/US_ecoregions.txt', sep = ""))
 load('data/Lica/BBS_partition_abundance.rda')
 abund <- as_tibble(BBS_partition_abundance); rm(BBS_partition_abundance)
