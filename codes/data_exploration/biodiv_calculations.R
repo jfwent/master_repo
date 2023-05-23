@@ -1,51 +1,164 @@
-##### div indices calculations
-
-#load data
+##### biodiversity indices calculations
+#=========
+####load data
 rm(list=ls())
 
 load("data/Lica/BBS_partition_abundance.rda")
-usbbs.data <- BBS_partition_abundance; rm(BBS_partition_abundance)
+abund <- BBS_partition_abundance; rm(BBS_partition_abundance)
 
+#=========
+#### calculate diversity indices for birds for all years
+
+library(dplyr); library(reshape2); library(vegan)
+
+segments <- unique(abund$partition)
+years <- unique(abund$year)
+birds <- unique(abund$animal_jetz)
+
+div_list <- list()
+
+for(i in seq_along(years)){
+  
+  tmp <- abund %>%
+    subset(year == years[i]) %>%
+    group_by(partition)
+  
+  sp.matrix <- dcast(tmp, partition ~ animal_jetz, 
+                     fun.aggregate = mean,  
+                     value.var = "seg_abundance",
+                     fill = 0)
+  
+  rownames(sp.matrix) <- sp.matrix$partition
+  sp.matrix <- sp.matrix[,-1]
+  
+  div_df <- as.data.frame(matrix(NA, nrow = length(unique(tmp$partition)), ncol=4))
+  colnames(div_df) <- c("shannon", "simpson", "richness", "segment")
+  
+  div_df$shannon <- diversity(sp.matrix, index = "shannon")
+  div_df$simpson <- diversity(sp.matrix, index = "simpson")
+  div_df$richness <- rowSums(sp.matrix != 0)
+  div_df$segment <- unique(tmp$partition)
+  
+  div_list[[i]] <- div_df
+}
+
+names(div_list) <- years
+
+rm(i, tmp, sp.matrix, div_df)
+
+
+### create 1 data frame with 3 columns of shannon, simpson and richness where rows are segments and year combinations
+rich_all <- lapply(div_list, function(df) df[[3]])
+rich_stack <- stack(rich_all); rm(rich_all)
+colnames(rich_stack) <- c("richness", "year")
+
+rich.wide <- rich_stack %>%
+    pivot_wider(names_from = "year", values_from = "richness")
 
 #=========
 
+#investigate the number of segments per year with no observed birds (richness == 0)
 
-years <- unique(usbbs.data$year) # insert your timepoint
-fun.vector <- c(min, mean, max)
-fun.names <- c("min", "mean", "max") 
-n <- 1 # position in function aggregate naming vector 
+seg_NAN <- list()
 
-for (fun.now in fun.vector){
-  
-  for(y in years){
-    
-    # set up loop
-    segments <- unique(usbbs.data$partition)
-    i <- 1
-    new.matrix <- TRUE
-    
-    if(y==2001)
-      usbbs.temp <- usbbs.data %>% filter( year == 2001 )
-    if(y==2016)
-      usbbs.temp <- usbbs.data %>% filter( year == 2016 )  
-    
-    for(segment.now in segments){
-      
-      sp.matrix.now <- usbbs.temp %>%
-        dcast(partition ~ species, fun.aggregate = fun.now,  value.var = segment.now, fill = 0) %>% 
-        as_tibble() 
-      
-      # modify partition name
-      sp.matrix.now$partition <- paste0(sp.matrix.now$partition,"_",i)
-      
-      if(new.matrix==T)
-        sp.matrix <- sp.matrix.now else
-          sp.matrix <- rbind(sp.matrix, sp.matrix.now) # add on each other
-      
-      new.matrix <- FALSE
-      
-      #update partition segment number 
-      i <- i+1
-    }
-  }   
+for(i in seq_along(years)){
+  div.now <- div_list[[i]]
+  seg.now <- div.now[div.now$richness == 0,]
+  seg_NAN[[i]] <- seg.now
 }
+
+rm(i, seg.now, div.now)
+
+#==========
+
+#Set up visualizations of the biodiversity indices
+
+library(ggplot2); library(hrbrthemes); library(viridis)
+
+#==========
+### violin plots of Shannon and simspon index
+
+for(i in seq_along(years)){
+  div.now <- div_list[[i]]
+  div.now <- div.now[,-(3:4)]
+  div.now.long <- div.now %>%
+    pivot_longer(cols = everything(), names_to = "name", values_to = "value")
+
+  div.now.long <- div.now.long %>% arrange(name)
+
+  sample_size = div.now.long %>% group_by(name) %>% summarize(num=n())
+  
+  plot <- div.now.long %>%
+    left_join(sample_size) %>%
+    mutate(myaxis = paste0(name, "\n", "n=", num)) %>%
+    ggplot( aes(x = myaxis, y = value, fill = name)) +
+    geom_violin(width = 1.4, position = "identity") +
+    geom_boxplot(width = 0.1,
+                 color = "grey",
+                 alpha = 0.2) +
+    scale_fill_viridis(discrete = TRUE) +
+    theme_ipsum() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle(paste0("Biodiversity indices in the year ", years[i])) +
+    xlab("")+
+    ylab("")
+  
+  print(plot)
+}
+
+rm(div.now, div.now.long, plot, sample_size, i)
+
+#============
+## ridge line plots to visualize the years for an index together
+
+library(ggridges)
+
+### prepare data
+rich_all <- lapply(div_list, function(df) df[[3]])
+rich_stack <- stack(rich_all); rm(rich_all)
+colnames(rich_stack) <- c("richness", "year")
+# rich_stack_size <- richness_stack %>% group_by(year) %>% summarize(num=n())
+
+# rich.wide <- rich_stack %>%
+#   pivot_wider(rows = everything(), names_from = "year", values_from = "richness")
+
+shannon_all <- lapply(div_list, function(df) df[[1]])
+shannon_stack <- stack(shannon_all); rm(shannon_all)
+colnames(shannon_stack) <- c("shannon", "year")
+
+simpson_all <- lapply(div_list, function(df) df[[2]])
+simpson_stack <- stack(simpson_all); rm(simspon_all)
+colnames(simpson_stack) <- c("simpson", "year")
+
+###plot
+ggplot(rich_stack, aes(x = `richness`, y = `year`, fill = after_stat(x)))+ 
+  geom_density_ridges_gradient(scale = 3,
+                               rel_min_height = 0.02,
+                               bandwidth = 2) +
+  scale_x_continuous(expand = c(0, 0), limits = c(0, 65)) +
+  scale_y_discrete(expand = expand_scale(mult = c(0.01, 0.17))) +
+  scale_fill_viridis(name = "richness", option = "C") +
+  ylab("") +
+  xlab("Richness")+
+  ggtitle(paste0("USBBS Richness 2000-2019"))
+
+ggplot(shannon_stack, aes(x = `shannon`, y = `year`, fill = after_stat(x)))+ 
+  geom_density_ridges_gradient(scale = 3.5, rel_min_height = 0.02, bandwidth = 0.1) +
+  scale_x_continuous(expand = c(0, 0), limits = c(0.9, 4)) +
+  scale_y_discrete(expand = expand_scale(mult = c(0.01, 0.2))) +
+  scale_fill_viridis(name = "shannon", option = "C") +
+  ylab("") +
+  xlab("Shannon index")+
+  ggtitle(paste0("USBBS Shannon index 2000-2019"))
+
+ggplot(simpson_stack, aes(x = `simpson`, y = `year`, fill = after_stat(x)))+ 
+  geom_density_ridges_gradient(scale = 2.5, rel_min_height = 0.02, bandwidth = 0.01) +
+  scale_x_continuous(expand = c(0, 0), limits = c(0.65, 1)) +
+  scale_y_discrete(expand = expand_scale(mult = c(0.01, 0.14))) +
+  scale_fill_viridis(name = "simpson", option = "C")+
+  ylab("") +
+  xlab("Simpson Index") +
+  ggtitle(paste0("USBBS Simpson index 2000-2019"))
