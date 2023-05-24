@@ -9,7 +9,7 @@ abund <- BBS_partition_abundance; rm(BBS_partition_abundance)
 #=========
 #### calculate diversity indices for birds for all years
 
-library(dplyr); library(reshape2); library(vegan)
+library(dplyr); library(reshape2); library(vegan); library(tidyr)
 
 segments <- unique(abund$partition)
 years <- unique(abund$year)
@@ -48,12 +48,43 @@ rm(i, tmp, sp.matrix, div_df)
 
 
 ### create 1 data frame with 3 columns of shannon, simpson and richness where rows are segments and year combinations
-rich_all <- lapply(div_list, function(df) df[[3]])
-rich_stack <- stack(rich_all); rm(rich_all)
-colnames(rich_stack) <- c("richness", "year")
+rich.all <- lapply(div_list, function(df) df[[3]])
+rich.stack <- stack(rich.all); rm(rich.all)
+colnames(rich.stack) <- c("richness", "year")
+rich.stack$ID <- seq.int(nrow(rich.stack))
 
-rich.wide <- rich_stack %>%
-    pivot_wider(names_from = "year", values_from = "richness")
+seg.all <- lapply(div_list, function(df) df[[4]])
+seg.stack <- stack(seg.all); rm(seg.all)
+colnames(seg.stack) <- c("segment", "year")
+seg.stack$ID <- seq.int(nrow(seg.stack))
+
+shannon.all <- lapply(div_list, function(df) df[[1]])
+shannon.stack <- stack(shannon.all); rm(shannon.all)
+colnames(shannon.stack) <- c("shannon", "year")
+shannon.stack$ID <- seq.int(nrow(shannon.stack))
+
+simpson.all <- lapply(div_list, function(df) df[[2]])
+simpson.stack <- stack(simpson.all); rm(simpson.all)
+colnames(simpson.stack) <- c("simpson", "year")
+simpson.stack$ID <- seq.int(nrow(simpson.stack))
+
+biodiv.stack1 <- dplyr::full_join(seg.stack, rich.stack, by = "ID")
+biodiv.stack2 <- dplyr::full_join(shannon.stack, simpson.stack, by = "ID")
+biodiv.df <- merge(biodiv.stack1, biodiv.stack2, by="ID")
+
+rm(simpson.stack, shannon.stack, rich.stack, seg.stack, biodiv.stack1, biodiv.stack2)
+
+biodiv.df <- biodiv.df %>% select(year.x.x, segment, richness, shannon, simpson)
+biodiv.df <- rename(biodiv.df, year = year.x.x)
+
+biodiv.size <- biodiv.df %>% group_by(year) %>% summarize(num=n())
+
+rm(biodiv.stack, div_list)
+
+save(biodiv.df, file="data/Lica/biodiv_indices.rda")
+
+# rich.wide <- rich_stack %>%
+#   pivot_wider(rows = everything(), names_from = "year", values_from = "richness")
 
 #=========
 
@@ -115,23 +146,6 @@ rm(div.now, div.now.long, plot, sample_size, i)
 ## ridge line plots to visualize the years for an index together
 
 library(ggridges)
-
-### prepare data
-rich_all <- lapply(div_list, function(df) df[[3]])
-rich_stack <- stack(rich_all); rm(rich_all)
-colnames(rich_stack) <- c("richness", "year")
-# rich_stack_size <- richness_stack %>% group_by(year) %>% summarize(num=n())
-
-# rich.wide <- rich_stack %>%
-#   pivot_wider(rows = everything(), names_from = "year", values_from = "richness")
-
-shannon_all <- lapply(div_list, function(df) df[[1]])
-shannon_stack <- stack(shannon_all); rm(shannon_all)
-colnames(shannon_stack) <- c("shannon", "year")
-
-simpson_all <- lapply(div_list, function(df) df[[2]])
-simpson_stack <- stack(simpson_all); rm(simspon_all)
-colnames(simpson_stack) <- c("simpson", "year")
 
 ###plot
 ggplot(rich_stack, aes(x = `richness`, y = `year`, fill = after_stat(x)))+ 
