@@ -6,21 +6,25 @@ rm(list=ls())
 load("data/Lica/BBS_partition_abundance.rda")
 abund <- BBS_partition_abundance; rm(BBS_partition_abundance)
 
+load("data/Lica/BBS_partition_abundance_2021.rda")
+
+bbs2021 <- bbs2021 %>% select(-segment)
+
+abund.all <- bind_rows(abund, bbs2021)
+
 #=========
 #### calculate diversity indices for birds for all years
 
 library(dplyr); library(reshape2); library(vegan); library(tidyr)
 
-segments <- unique(abund$partition)
-years <- unique(abund$year)
-birds <- unique(abund$animal_jetz)
+years.all <- unique(abund.all$year)
 
 div_list <- list()
 
-for(i in seq_along(years)){
+for(i in seq_along(years.all)){
   
-  tmp <- abund %>%
-    subset(year == years[i]) %>%
+  tmp <- abund.all %>%
+    subset(year == years.all[i]) %>%
     group_by(partition)
   
   sp.matrix <- dcast(tmp, partition ~ animal_jetz, 
@@ -42,12 +46,12 @@ for(i in seq_along(years)){
   div_list[[i]] <- div_df
 }
 
-names(div_list) <- years
+names(div_list) <- years.all
 
 rm(i, tmp, sp.matrix, div_df)
 
-
 ### create 1 data frame with 3 columns of shannon, simpson and richness where rows are segments and year combinations
+
 rich.all <- lapply(div_list, function(df) df[[3]])
 rich.stack <- stack(rich.all); rm(rich.all)
 colnames(rich.stack) <- c("richness", "year")
@@ -79,8 +83,6 @@ biodiv.df <- rename(biodiv.df, year = year.x.x)
 
 biodiv.size <- biodiv.df %>% group_by(year) %>% summarize(num=n())
 
-rm(biodiv.stack, div_list)
-
 save(biodiv.df, file="data/Lica/biodiv_indices.rda")
 
 # rich.wide <- rich_stack %>%
@@ -92,7 +94,7 @@ save(biodiv.df, file="data/Lica/biodiv_indices.rda")
 
 seg_NAN <- list()
 
-for(i in seq_along(years)){
+for(i in seq_along(years.all)){
   div.now <- div_list[[i]]
   seg.now <- div.now[div.now$richness == 0,]
   seg_NAN[[i]] <- seg.now
@@ -109,7 +111,7 @@ library(ggplot2); library(hrbrthemes); library(viridis)
 #==========
 ### violin plots of Shannon and simspon index
 
-for(i in seq_along(years)){
+for(i in seq_along(years.all)){
   div.now <- div_list[[i]]
   div.now <- div.now[,-(3:4)]
   div.now.long <- div.now %>%
@@ -133,7 +135,7 @@ for(i in seq_along(years)){
       legend.position="none",
       plot.title = element_text(size=11)
     ) +
-    ggtitle(paste0("Biodiversity indices in the year ", years[i])) +
+    ggtitle(paste0("Biodiversity indices in the year ", years.all[i])) +
     xlab("")+
     ylab("")
   
@@ -148,7 +150,7 @@ rm(div.now, div.now.long, plot, sample_size, i)
 library(ggridges)
 
 ###plot
-ggplot(rich_stack, aes(x = `richness`, y = `year`, fill = after_stat(x)))+ 
+ggplot(biodiv.df, aes(x = `richness`, y = `year`, fill = after_stat(x)))+ 
   geom_density_ridges_gradient(scale = 3,
                                rel_min_height = 0.02,
                                bandwidth = 2) +
@@ -157,22 +159,22 @@ ggplot(rich_stack, aes(x = `richness`, y = `year`, fill = after_stat(x)))+
   scale_fill_viridis(name = "richness", option = "C") +
   ylab("") +
   xlab("Richness")+
-  ggtitle(paste0("USBBS Richness 2000-2019"))
+  ggtitle(paste0("USBBS Richness 2000-2021"))
 
-ggplot(shannon_stack, aes(x = `shannon`, y = `year`, fill = after_stat(x)))+ 
+ggplot(biodiv.df, aes(x = `shannon`, y = `year`, fill = after_stat(x)))+ 
   geom_density_ridges_gradient(scale = 3.5, rel_min_height = 0.02, bandwidth = 0.1) +
   scale_x_continuous(expand = c(0, 0), limits = c(0.9, 4)) +
   scale_y_discrete(expand = expand_scale(mult = c(0.01, 0.2))) +
   scale_fill_viridis(name = "shannon", option = "C") +
   ylab("") +
   xlab("Shannon index")+
-  ggtitle(paste0("USBBS Shannon index 2000-2019"))
+  ggtitle(paste0("USBBS Shannon index 2000-2021"))
 
-ggplot(simpson_stack, aes(x = `simpson`, y = `year`, fill = after_stat(x)))+ 
+ggplot(biodiv.df, aes(x = `simpson`, y = `year`, fill = after_stat(x)))+ 
   geom_density_ridges_gradient(scale = 2.5, rel_min_height = 0.02, bandwidth = 0.01) +
   scale_x_continuous(expand = c(0, 0), limits = c(0.65, 1)) +
   scale_y_discrete(expand = expand_scale(mult = c(0.01, 0.14))) +
   scale_fill_viridis(name = "simpson", option = "C")+
   ylab("") +
   xlab("Simpson Index") +
-  ggtitle(paste0("USBBS Simpson index 2000-2019"))
+  ggtitle(paste0("USBBS Simpson index 2000-2021"))

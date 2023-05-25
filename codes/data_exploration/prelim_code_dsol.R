@@ -95,7 +95,6 @@ View(df_final)
 
 df_final$alterations <- (df_final$pasture_after+df_final$crop_after+df_final$urban.high_after+df_final$urban.low_after) - (df_final$pasture_before+df_final$crop_before+ df_final$urban.high_before+df_final$urban.low_before) 
 
-
 # model changes in abundance after urbanization
 model <- brm(AbundAfter ~ AbundBefore + alterations + (1|Ecoregion) + (1|route),
              family = negbinomial(),  control = list(adapt_delta = 0.9999, max_treedepth = 12),
