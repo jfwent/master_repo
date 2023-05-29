@@ -20,6 +20,7 @@ library(dplyr); library(reshape2); library(vegan); library(tidyr)
 years.all <- unique(abund.all$year)
 
 div_list <- list()
+sp_mat_list <- list()
 
 for(i in seq_along(years.all)){
   
@@ -31,6 +32,10 @@ for(i in seq_along(years.all)){
                      fun.aggregate = mean,  
                      value.var = "seg_abundance",
                      fill = 0)
+  
+  sp.mat <- sp.matrix
+  sp.mat$year <- years.all[i]
+  sp_mat_list[[i]] <- sp.mat
   
   rownames(sp.matrix) <- sp.matrix$partition
   sp.matrix <- sp.matrix[,-1]
@@ -48,9 +53,12 @@ for(i in seq_along(years.all)){
 
 names(div_list) <- years.all
 
-rm(i, tmp, sp.matrix, div_df)
+rm(i, tmp, sp.matrix, div_df, sp.mat)
 
-### create 1 data frame with 3 columns of shannon, simpson and richness where rows are segments and year combinations
+save(sp_mat_list, file = "/Users/jonwent/Downloads/sp_mat_list.rda")
+rm(sp_mat_list)
+
+### create 1 data frame with 3 columns of shannon, simpson and richness where rows are segment+year combinations
 
 rich.all <- lapply(div_list, function(df) df[[3]])
 rich.stack <- stack(rich.all); rm(rich.all)
