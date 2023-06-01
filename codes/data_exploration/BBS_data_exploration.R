@@ -3,7 +3,7 @@
 
 #set up
 rm(list=ls())
-install.packages("plotly")
+
 library(viridis)
 library(dplyr)
 library(sf)
@@ -12,7 +12,6 @@ library(leaflet.extras2)
 library(mapshot)
 library(ggplot2)
 library(hrbrthemes)
-# library(streamgraph)
 library(plotly)
 
 ###get data

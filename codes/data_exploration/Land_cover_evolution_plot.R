@@ -42,42 +42,115 @@ full_df <- full_df %>% select(-FID, -Kilometers)
 
 birds <- unique(abund.all$animal_jetz)
 years.all <- unique(abund.all$year)
-
-for (j in seq_along(birds)) {
-  i <- years.all[1]
-  tmp <- lapply(sp_mat_list, function(df) df[[2]])
-  names(tmp) <- unique(abund.all$year)
-  tmp.stack <- stack(tmp)
-  colnames(tmp.stack) <- c(birds[j], i)
-}
-
-
-#=============== check for biggest changes
-
 segments <- unique(full_df$partition)
+
+#=============== check for biggest changes========
 
 for(i in seq_along(segments)){
   
   tmp <- full_df %>%
-    filter(partition == segments[1])
+    filter(partition == segments[i])
   
   df_name <- paste0("diff_df")
   
-  if(exists(diff_df)){
-    tmp.now <- tmp %>%
-      select(-partition, -Ecoregion)
+  if(exists(df_name)){
     
-    d_tmp <- c(NA, diff(tmp.now))
-      
+    tmp.now <- tmp %>%
+      select(-partition, -Ecoregion, -year)
+    
+    # d_tmp <- c(NA, diff(tmp.now))
+    diff_tmp <- as.data.frame(apply(tmp.now, 2, diff))
+    diff_tmp$year <- tmp$year[2:length(tmp$year)]
+    diff_tmp$partition <- segments[i]
+    diff_tmp$Ecoregion <- tmp$Ecoregion[2:length(tmp$Ecoregion)]
+  
+    diff_tmp <- relocate(diff_tmp, year, partition, .before = forest) 
+    
+    diff_df <- rbind(diff_df, diff_tmp)
+    
   }else{
     
+    tmp.now <- tmp %>%
+      select(-partition, -Ecoregion, -year)
+    
+    # d_tmp <- c(NA, diff(tmp.now))
+    diff_tmp <- as.data.frame(apply(tmp.now, 2, diff))
+    diff_tmp$year <- tmp$year[2:length(tmp$year)]
+    diff_tmp$partition <- segments[i]
+    diff_tmp$Ecoregion <- tmp$Ecoregion[2:length(tmp$Ecoregion)]
+    
+    diff_tmp <- relocate(diff_tmp, year, partition, .before = forest) 
+    
+    diff_df <- diff_tmp
   }
+}
+
+rm(diff_tmp, tmp, tmp.now, i)
+
+#=========plot land cover difference as map and with overlaying sp diversity indices =======
+library(rgdal);library(mapview); library(leaflet); library(RColorBrewer); library(leaflet.extras2)
+
+base_color <- "#FF0000"
+pal <- colorRampPalette(c(base_color, base_color))(length(unique(full_df$Ecoregion)))
+
+routes <- readOGR("/Users/jonwent/polybox/Master thesis/Routes shapefile/segments_NLCD.2019_subset2.shp")
+ecoreg_shp <- readOGR("/Users/jonwent/Desktop/ETHZ/master_thesis/Data/us_eco_l3.shp")
+
+years <- unique(full_df$year)
+
+LC_map_list <- list()
+dLC_map_list <- list()
+
+for(i in seq_along(unique(full_df$year))){
+  
+  mapname1 <- paste0("LC_", years[i])
+  mapname2 <- paste0("dLC_", years[i])
+  
+  LC.now <- full_df %>%
+    filter(year == years[i])
+  
+  dLC.now <- diff_df %>%
+    filter(year == years[i])
+  
+  map.now <- merge(routes, LC.now, by="partition")
+  dmap.now <- merge(routes, dLC.now, by="partition")
+  
+  dLC_map_list[[mapname2]] <- dmap.now
+  LC_map_list[[mapname1]] <- map.now
+}
+
+rm(map.now, dmap.now, dLC.now, i)
+
+
+
+LC_map_forest_rich <- mapview(LC_map_list, lwd = "richness", alpha = 0.5, zcol = "forest", legend=F)
+
+(LC_map_forest_rich | LC_map_forest_rich)
+
+
+mapview(LC_map_list, lwd = "forest", #map.types = "leaflet", layer.name = "year",
+        alpha = 0.5, zcol = "shannon", legend=F)
+mapview(dLC_map_list, lwd = "crop", alpha = 0.5, zcol = "richness", legend=F)
+
+sldf.now <- LC_map_list[[1]]
+
+sldf_list <- list()
+
+for(col_name in sldf.now@data[-1]){
+  
+  sldf <- SpatialLinesDataFrame(sldf.now@lines,
+                                data = data.frame(ID = sldf.now$partition, 
+                                                  Value = sldf.now@data[[col_name]]))
+  attr(sldf, "mapview.layer.name") <- col_name
+  
+  sldf_list[[col_name]] <- sldf
   
 }
 
+mapview(dLC_map_list)
 
-
-#==============plot forest cover evolution and sp richness
+#=============plot Evolution of LC & sp diversity indices==========
+#
 
 library(plotly)
 ecoregs <- unique(full_df$Ecoregion)
