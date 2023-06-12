@@ -3,6 +3,8 @@
 ####load data
 rm(list=ls())
 
+library(dplyr)
+
 load("data/Lica/BBS_partition_abundance.rda")
 abund <- BBS_partition_abundance; rm(BBS_partition_abundance)
 
@@ -15,7 +17,7 @@ abund.all <- bind_rows(abund, bbs2021)
 #=========
 #### calculate diversity indices for birds for all years
 
-library(dplyr); library(reshape2); library(vegan); library(tidyr)
+library(reshape2); library(vegan); library(tidyr)
 
 years.all <- unique(abund.all$year)
 
@@ -158,7 +160,7 @@ rm(div.now, div.now.long, plot, sample_size, i)
 library(ggridges)
 
 ###plot
-ggplot(biodiv.df, aes(x = `richness`, y = `year`, fill = after_stat(x)))+ 
+richness_ridge <- ggplot(biodiv.df, aes(x = `richness`, y = `year`, fill = after_stat(x)))+ 
   geom_density_ridges_gradient(scale = 3,
                                rel_min_height = 0.02,
                                bandwidth = 2) +
@@ -169,7 +171,7 @@ ggplot(biodiv.df, aes(x = `richness`, y = `year`, fill = after_stat(x)))+
   xlab("Richness")+
   ggtitle(paste0("USBBS Richness 2000-2021"))
 
-ggplot(biodiv.df, aes(x = `shannon`, y = `year`, fill = after_stat(x)))+ 
+shannon_ridge <- ggplot(biodiv.df, aes(x = `shannon`, y = `year`, fill = after_stat(x)))+ 
   geom_density_ridges_gradient(scale = 3.5, rel_min_height = 0.02, bandwidth = 0.1) +
   scale_x_continuous(expand = c(0, 0), limits = c(0.9, 4)) +
   scale_y_discrete(expand = expand_scale(mult = c(0.01, 0.2))) +
@@ -178,7 +180,7 @@ ggplot(biodiv.df, aes(x = `shannon`, y = `year`, fill = after_stat(x)))+
   xlab("Shannon index")+
   ggtitle(paste0("USBBS Shannon index 2000-2021"))
 
-ggplot(biodiv.df, aes(x = `simpson`, y = `year`, fill = after_stat(x)))+ 
+simpson_ridge <- ggplot(biodiv.df, aes(x = `simpson`, y = `year`, fill = after_stat(x)))+ 
   geom_density_ridges_gradient(scale = 2.5, rel_min_height = 0.02, bandwidth = 0.01) +
   scale_x_continuous(expand = c(0, 0), limits = c(0.65, 1)) +
   scale_y_discrete(expand = expand_scale(mult = c(0.01, 0.14))) +
@@ -186,3 +188,19 @@ ggplot(biodiv.df, aes(x = `simpson`, y = `year`, fill = after_stat(x)))+
   ylab("") +
   xlab("Simpson Index") +
   ggtitle(paste0("USBBS Simpson index 2000-2021"))
+
+
+shannon_ridge
+simpson_ridge
+
+pdf(file="figures/richness_ridge.pdf")
+richness_ridge
+dev.off()
+
+pdf(file="figures/shannon_ridge.pdf")
+shannon_ridge
+dev.off()
+
+pdf(file="figures/simpson_ridge.pdf")
+simpson_ridge
+dev.off()

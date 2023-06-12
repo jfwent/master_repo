@@ -30,7 +30,6 @@ length(unique(ecoreg$Ecoregion)) # 83 ecoregions
 length(unique(land$year)) # 8 years
 length(unique(land$partition)) # 1923 partitions
 
-
 ##======
 
 library(ggplot2); library(dplyr); library(viridis)
@@ -68,7 +67,7 @@ land_merged_sub <- arrange(land_merged_sub, year) # order the years
 land_years <- land_merged_sub %>%
   group_nest(year)
 
-###===== 
+###===== whole USA for 2001 =======
 
 #start by trying to cluster the land cover of the segments for 2001
 
@@ -224,7 +223,15 @@ set.seed(123)
 
 ### K Means
 fviz_nbclust(normalized_hab_Piedmont2001, kmeans, method = "wss")+ theme_classic() # WCSS method shows 2-3 clusters optimal
-k_res <- kmeans(normalized_hab_Piedmont2001, centers = 2, nstart = 25)
+
+wss <- rep(NA, 10)
+for (i in 2:10) {
+  wss[i] <- sum(kmeans(normalized_hab_Piedmont2001, centers = i)$withinss)
+}
+
+k_opt <- which.min(wss)
+
+k_res <- kmeans(normalized_hab_Piedmont2001, centers = k_opt, nstart = 25)
 fviz_cluster(list(data = normalized_hab_Piedmont2001, cluster = k_res$cluster),
              ellipse.type = "norm", geom = "point", stand = FALSE,
              palette = "jco", ggtheme = theme_classic())
@@ -265,7 +272,7 @@ pairs(normalized_hab_Piedmont2001[,1:7], col = pam.res3$clustering)
 
 library(clValid)
 
-cl_valid_pied <- clValid(obj = normalized_hab_Piedmont2001, nClust = 2:5,
+cl_valid_pied <- clValid(obj = normalized_hab_Piedmont2001, nClust = 2:10,
                          clMethods = c("hierarchical", "kmeans"),
                          metric = "euclidean")
 

@@ -102,6 +102,8 @@ shannon2001_bayesianB <- df2001_bayesian2
 save(shannon2001_bayesianA, file="/Users/jonwent/downloads/shannon2001_bayesianA.rda")
 save(shannon2001_bayesianB, file="/Users/jonwent/downloads/shannon2001_bayesianB.rda")
 
+
+
 summary(shannon2001_bayesianA)
 pp_check(shannon2001_bayesianA)
 
@@ -137,7 +139,7 @@ corrplot(var_inv, method='number', is.corr = F)
 
 #========glm models for 2001=========
 
-source("glmm_model_builder.R")
+source("codes/data_exploration/glmm_model_builder.R")
 glmm2001_shannon <- function_glmm(df2001, "shannon")
 glmm2001_simpson <- function_glmm(df2001, "simpson")
 glmm2001_richness <- function_glmm(df2001, "richness")

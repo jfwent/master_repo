@@ -43,6 +43,7 @@ full_df <- full_df %>% select(-FID, -Kilometers)
 birds <- unique(abund.all$animal_jetz)
 years.all <- unique(abund.all$year)
 segments <- unique(full_df$partition)
+years <- unique(full_df$year)
 
 #=============== check for biggest changes========
 
@@ -87,6 +88,39 @@ for(i in seq_along(segments)){
 
 rm(diff_tmp, tmp, tmp.now, i)
 
+diff_yrs <- diff_df %>%
+  group_by(year) %>%
+  summarize(sum_forest = sum(forest),
+            mean_forest = mean(forest),
+            sd_forest = sd(forest),
+            sum_urban = sum(urban),
+            mean_urban = mean(urban),
+            sd_urban = sd(urban),
+            sum_crop = sum(crop),
+            mean_crop = mean(crop),
+            sd_crop = sd(crop),
+            sum_grass = sum(grass),
+            mean_grass = mean(grass),
+            sd_grass = mean(grass),
+            sum_pasture = sum(pasture),
+            mean_pasture = mean(pasture),
+            sd_pasture = sd(pasture),
+            sum_wet = sum(wet),
+            mean_wet = mean(wet),
+            sd_wet = sd(wet)
+            )
+
+for(i in years){
+  
+  tmp <- full_df %>%
+    filter(year == years[1])
+  
+  tmp.mat <- data.matrix(tmp[,3:9])
+  
+  heatmap <- heatmap(tmp.mat, scale="column")
+  
+}
+
 #=========plot land cover difference as map and with overlaying sp diversity indices =======
 library(rgdal);library(mapview); library(leaflet); library(RColorBrewer); library(leaflet.extras2)
 
@@ -95,8 +129,6 @@ pal <- colorRampPalette(c(base_color, base_color))(length(unique(full_df$Ecoregi
 
 routes <- readOGR("/Users/jonwent/polybox/Master thesis/Routes shapefile/segments_NLCD.2019_subset2.shp")
 ecoreg_shp <- readOGR("/Users/jonwent/Desktop/ETHZ/master_thesis/Data/us_eco_l3.shp")
-
-years <- unique(full_df$year)
 
 LC_map_list <- list()
 dLC_map_list <- list()
@@ -123,14 +155,16 @@ rm(map.now, dmap.now, dLC.now, i)
 
 
 
-LC_map_forest_rich <- mapview(LC_map_list, lwd = "richness", alpha = 0.5, zcol = "forest", legend=F)
+LC_map_forest_rich <- mapview(LC_map_list, lwd = "shannon", alpha = 0.5, zcol = "forest", legend=F)
+
+LC_map_forest_rich
 
 (LC_map_forest_rich | LC_map_forest_rich)
 
 
 mapview(LC_map_list, lwd = "forest", #map.types = "leaflet", layer.name = "year",
-        alpha = 0.5, zcol = "shannon", legend=F)
-mapview(dLC_map_list, lwd = "crop", alpha = 0.5, zcol = "richness", legend=F)
+        alpha = 0.5, zcol = "simpson", legend=F)
+mapview(dLC_map_list, lwd = "richness", alpha = 0.5, zcol = "forest", legend=F)
 
 sldf.now <- LC_map_list[[1]]
 
@@ -180,10 +214,16 @@ for(i in seq_along(ecoregs)){
   fig1 <- fig1 %>% add_trace(y = ~wet_mean, name = 'Wet')
   fig1 <- fig1 %>% add_trace(y = ~barren_mean, name = 'Barren')
   fig1 <- fig1 %>% add_lines(y = fit_rich, name = 'Sp richness')
-  fig1 <- fig1 %>% add_lines(y = fit_shannon, name = 'Shannon index')
-  fig1 <- fig1 %>% add_lines(y = fit_simpson, name = 'Simpson index', color = 'grey')
+  fig1 <- fig1 %>% add_lines(y = fit_shannon, name = 'Shannon index', yaxis = "y2")
+  fig1 <- fig1 %>% add_lines(y = fit_simpson, name = 'Simpson index', color = 'grey', yaxis = "y2")
+  
+  ay <- list(
+    side="right",
+    overlaying = "y"
+  )
+  
   fig1 <- fig1 %>% layout(
-    title = paste0("Ecoregion: ", ecoregs[i]),
+    title = paste0("Ecoregion: ", ecoregs[i]), yaxis2 = ay,
     xaxis = list(title = "Year"),
     yaxis = list(title = "Land cover [%]")
   )
@@ -191,5 +231,14 @@ for(i in seq_along(ecoregs)){
   Ecoreg_plots[[i]] <- fig1
 }
 
-Ecoreg_plots[[50]]
+save(Ecoreg_plots, file = "figures/ecoreg_plots.rda")
+
+load("figures/ecoreg_plots.rda")
+Ecoreg_plots[[70]]
+
+library(htmlwidgets)
+
+for(i in seq_along(unique(ecoreg$Ecoregion))){
+  print(Ecoreg_plots[[i]])
+}
 
