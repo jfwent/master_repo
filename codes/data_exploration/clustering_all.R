@@ -42,6 +42,14 @@ grouped <- dat_norm %>%
 summary(grouped$segment_count)
 sd(grouped$segment_count)
 
+grouped_filter <- dat_norm %>%
+  group_by(ecoregion, year) %>%
+  summarise(segment_count = n()) %>%
+  filter(segment_count > 2) %>%
+  ungroup()
+
+dat_norm_filt <- dat_norm[dat_norm$ecoregion %in% unique(grouped_filter$ecoregion),]
+
 ###==== hierarchical bottom up clustering function for 1 Ecoregion in 1 year =====
 
 cluster_data <- function(df, year, ecoregion, clust_method = "ward.D2") {
@@ -58,7 +66,7 @@ cluster_data <- function(df, year, ecoregion, clust_method = "ward.D2") {
     t()
   
   # Perform clustering using pvclust
-  pv_fit <- pvclust(clustDat, method.hclust = clust_method)
+  pv_fit <- pvclust(clustDat, method.hclust = clust_method, quiet = T)
   
   pv_clust <- pvpick(pv_fit, alpha=.80, pv="au", type="geq")
   
@@ -85,13 +93,99 @@ rm(clust_2001_ecoreg1)
 
 ###==== build function to analyze all ecoregions ====
 
-clust_2001 <- list()
+results <- list()
 
-for(i in seq_along(unique(dat_norm$ecoregion))){
-  clust_2001
+ecoregs <- unique(dat_norm_filt$ecoregion)
+
+pb <- txtProgressBar(min = 0,      # Minimum value of the progress bar
+                     max = length(ecoregs), # Maximum value of the progress bar
+                     style = 3,    # Progress bar style (also available style = 1 and style = 2)
+                     width = 50,   # Progress bar width. Defaults to getOption("width")
+                     char = "=")   # Character used to create the bar
+
+for (ecoreg in ecoregs) {
+  
+  result <- cluster_data(dat_norm, 2001, ecoregion = ecoreg)
+  results[[paste0(ecoreg, "_", 2001)]] <- result
+  
+  setTxtProgressBar(pb, ecoreg)
 }
 
+combined_df <- bind_rows(results)
+
+ecoregs_clustered_2001 <- unique(combined_df$ecoregion)
+
+ecoregs_missing <- lubridate::setdiff(ecoregs, ecoregs_clustered_2001)
+
+wyoming_clust = cluster_data(df = dat_norm, year = 2001, ecoregion = "Wyoming_Basin")
+
+north_casc_clust = cluster_data(df = dat_norm, year = 2001, ecoregion = "North_Cascades")
+
+col_plateau_clust = cluster_data(df = dat_norm, year = 2001, ecoregion = "Columbia_Plateau")
+
+combined_df_all_2001 <- bind_rows(combined_df, wyoming_clust, north_casc_clust, col_plateau_clust)
+
+sum(is.na(combined_df_all_2001$cluster_nr)) # 19 data points could not be clustered
+
+rm(results, combined_df, combined_df_all, wyoming_clust, north_casc_clust, col_plateau_clust)
+rm(result, pb, wasatch_clust, all_results)
+rm(ecoreg, ecoregs, ecoregion, ecoregs_clustered_2001, ecoregs_missing, ecoregs_tmp)
+rm(n_iter, cluster_all_data)
+
 ###==== build loop to analyze all years ====
+library(lubridate)
+
+results <- list()
+
+ecoregs <- unique(dat_norm_filt$ecoregion)
+
+n_iter <- length(ecoregs)
+
+pb <- txtProgressBar(min = 0,      # Minimum value of the progress bar
+                     max = n_iter, # Maximum value of the progress bar
+                     style = 3,    # Progress bar style (also available style = 1 and style = 2)
+                     width = 50,   # Progress bar width. Defaults to getOption("width")
+                     char = "=")   # Character used to create the bar
+
+init <- numeric(n_iter)
+end <- numeric(n_iter)
+
+years <- unique(dat_norm_filt$year)
+
+for(j in years){
+  
+  for(i in 1:n_iter){
+    init[i] <- Sys.time()
+    
+    #------------
+    
+    result <- cluster_data(dat_norm, year = j, ecoregion = ecoregs[i])
+    results[[paste0(ecoregs[i], "_", j)]] <- result
+    
+    #------------
+    
+    end[i] <- Sys.time()
+    
+    setTxtProgressBar(pb, i)
+    time <- round(seconds_to_period(sum(end - init)), 0)
+    
+    # Estimated remaining time based on the
+    # mean time that took to run the previous iterations
+    est <- n_iter * (mean(end[end != 0] - init[init != 0])) - time
+    remainining <- round(seconds_to_period(est), 0)
+    
+    cat(paste(" // Execution time:", time,
+              " // Estimated time remaining:", remainining), "")
+  }
+}
+
+combined_df <- bind_rows(results)
+
+combined_df$cluster <- paste0(combined_df$ecoregion, "_", combined_df$cluster_nr)
+
+summary(combined_df$cluster_nr) # 150 NA's --> approx 19 per year
+
+save(combined_df, file = "data/land_use_clustered.rda")
 
 ###==== previous attempt 1 ====
 
@@ -270,4 +364,5 @@ cluster_ecoreg <- function(df, year_now){
   
   return(df_sub)
 }
+    
     
