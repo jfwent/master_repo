@@ -7,15 +7,15 @@ rm(list=ls())
 
 # install.packages("betapart")
 library(betapart)
+# data set up: matrix with presence/absence (1/0) for birds in columns and locations in rows
 
-data(bbsData) # 49x569 matrix with presence/absence (1/0) for birds in columns (AOU nr) and state nrs (rows)
+load("data/Lica/BBS_partition_abundance.rda")
+bbs_all <- BBS_partition_abundance; rm(BBS_partition_abundance)
 
-load("data/Lica/BBS_partition_abundance_2021.rda")
-
-#------ loop through data -----
+#------ loop through data 2000 to 2019 -----
 res <- list()
 
-years <- unique(bbs2021$year)
+years <- unique(bbs_all$year)
 
 n_iter <- length(years)
 
@@ -33,7 +33,7 @@ for(k in seq_along(years)){
   init[k] <- Sys.time()
   #---------------------
   
-  bbs.now <- subset(bbs2021, year == years[k])
+  bbs.now <- subset(bbs_all, year == years[k])
   
   # Get unique segments and bird species
   unique_segments <- unique(bbs.now$partition)
@@ -90,53 +90,35 @@ for(k in seq_along(years)){
             " // Estimated time remaining:", remainining), "")
 }
 
-#-----
-res <- list()
-years <- unique(bbs2021$year)
-n_iter <- length(years)
+#----- create matrix for year 2021 -----
 
-pb <- txtProgressBar(min = 0, max = n_iter, style = 3, width = 50, char = "=")
+load("data/Lica/BBS_partition_abundance_2021.rda")
 
-init <- numeric(n_iter)
-end <- numeric(n_iter)
+unique_segments2021 <- unique(bbs2021$partition)
+unique_birds2021 <- unique(bbs2021$animal_jetz)
 
-for (k in years) {
-  init[k] <- Sys.time()
-  bbs.now <- subset(bbs2021, year == k)
+bbsMat.2021 <- matrix(NA, nrow = length(unique_segments2021), ncol = length(unique_birds2021))
+
+rownames(bbsMat.2021) <- unique_segments2021
+colnames(bbsMat.2021) <- unique_birds2021
+
+for (i in 1:length(unique_segments2021)) {
   
-  unique_segments <- unique(bbs.now$partition)
-  unique_birds <- unique(bbs.now$animal_jetz)
+  segment <- unique_segments2021[i]
+  segment_data <- bbs2021[bbs2021$partition == segment, ]
   
-  bbsMat.now <- matrix(0, nrow = length(unique_segments), ncol = length(unique_birds))
-  
-  rownames(bbsMat.now) <- unique_segments
-  colnames(bbsMat.now) <- unique_birds
-  
-  for (i in 1:length(unique_segments)) {
-    segment <- unique_segments[i]
-    segment_data <- bbs.now[bbs.now$partition == segment, ]
+  for (j in 1:length(unique_birds2021)) {
+    bird <- unique_birds2021[j]
     
-    for (j in 1:length(unique_birds)) {
-      bird <- unique_birds[j]
+    if (bird %in% segment_data$animal_jetz) {
+      max_abundance <- max(segment_data$seg_abundance[segment_data$animal_jetz == bird], na.rm = TRUE)
       
-      if (bird %in% segment_data$animal_jetz) {
-        max_abundance <- max(segment_data$seg_abundance[segment_data$animal_jetz == bird], na.rm = TRUE)
-        
-        if (!is.na(max_abundance) && max_abundance > 0) {
-          bbsMat.now[i, j] <- 1
-        }
+      if (!is.na(max_abundance) && max_abundance > 0) {
+        bbsMat.2021[i, j] <- 1
+      }else{
+        bbsMat.2021[i, j] <- 0
       }
     }
   }
-  
-  res[[as.character(k)]] <- bbsMat.now
-  
-  end[k] <- Sys.time()
-  
-  setTxtProgressBar(pb, k)
-  time <- round(seconds_to_period(sum(end - init)), 0)
-  est <- n_iter * (mean(end[end != 0] - init[init != 0])) - time
-  remaining <- round(seconds_to_period(est), 0)
-  
-  cat(paste(" // Execution time:", time, " // Estimated time remaining:", remaining), "")
 }
+
