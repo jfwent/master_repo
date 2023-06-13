@@ -80,7 +80,6 @@ cluster_data <- function(df, year, ecoregion, clust_method = "ward.D2") {
   return(df_subset)
 }
 
-
 ###==== try function ====
 
 ecoregs <- unique(dat_norm$ecoregion)
@@ -187,7 +186,10 @@ summary(combined_df$cluster_nr) # 150 NA's --> approx 19 per year
 
 save(combined_df, file = "data/land_use_clustered.rda")
 
-###=====
+#----- find segments with changes in land cover clusters between years ----
+
+
+load("data/land_use_clustered.rda")
 
 changes <- combined_df %>%
   group_by(segment, year) %>%

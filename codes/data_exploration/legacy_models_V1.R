@@ -139,7 +139,7 @@ corrplot(var_inv, method='number', is.corr = F)
 
 #========glm models for 2001=========
 
-source("codes/data_exploration/glmm_model_builder.R")
+source("codes/functions/glmm_model_builder.R")
 glmm2001_shannon <- function_glmm(df2001, "shannon")
 glmm2001_simpson <- function_glmm(df2001, "simpson")
 glmm2001_richness <- function_glmm(df2001, "richness")
