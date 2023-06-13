@@ -384,3 +384,109 @@ result_2005_2006 <- results[["2005_2006"]]
 
 beta_diversity <- results
 save(beta_diversity, file = "data/beta_diversity_list.rda")
+
+#------ visualize some results -----
+rm(list=ls())
+
+load("data/beta_diversity_list.rda")
+load("data/pres_abs_mat_list.rda")
+
+bbs.t <- beta_diversity[["2000_2001"]]
+
+# Set up the plot
+with(bbs.t, plot(sqrt(beta.sim) ~ sqrt(beta.sne),
+                 type = 'n',
+                 ylab = expression(sqrt(beta[sim])),
+                 xlab = expression(sqrt(beta[sne])),
+                 main = paste0("Temp diff beta div 2000-2001")))
+
+# Calculate the density of data points
+point_density <- density(sqrt(bbs.t$beta.sne), na.rm = TRUE)
+
+# Set up the transparency based on point density
+opacity <- point_density$y / max(point_density$y)
+
+# Add markers with transparency
+with(bbs.t, points(sqrt(beta.sne), sqrt(beta.sim), pch = 16, cex = 1, col = alpha("black", opacity)))
+
+#---- loop over years to plot -----
+# Create an empty list to store the plots
+plot_list <- list()
+
+x_limits <- c(0, max(sapply(beta_diversity, function(x) sqrt(max(x$beta.sne, na.rm = TRUE)))))
+y_limits <- c(0, max(sapply(beta_diversity, function(x) sqrt(max(x$beta.sim, na.rm = TRUE)))))
+
+# Iterate over each entry in beta_diversity
+for (i in seq_along(beta_diversity)) {
+  # Extract the data for the current entry
+  bbs.t <- beta_diversity[[i]]
+  
+  # Set up the plot
+  with(bbs.t, plot(sqrt(beta.sim) ~ sqrt(beta.sne),
+                   type = 'n',
+                   ylab = expression(sqrt(beta[sim])), # value of the turnover component, measured as Simpson dissimilarity
+                   xlab = expression(sqrt(beta[sne])), # value of the nestedness component,
+                                                      # measured as nestedness-resultant fraction of Sorensen dissimilarity
+                   xlim = x_limits,
+                   ylim = y_limits,
+                   main = paste0("Temp diff beta div ", names(beta_diversity)[i])))
+  
+  # Calculate the density of data points
+  point_density <- density(sqrt(bbs.t$beta.sne), na.rm = TRUE)
+  
+  # Set up the transparency based on point density
+  opacity <- point_density$y / max(point_density$y)
+  
+  # Add markers with transparency
+  with(bbs.t, points(sqrt(beta.sne), sqrt(beta.sim), pch = 16, cex = 1, col = alpha("black", opacity)))
+  
+  # Store the plot in the plot_list
+  plot_list[[i]] <- recordPlot()
+}
+
+save(plot_list, file="figures/beta_diversity_plot_list.rda")
+
+#---- create animation to show temporal changes ----
+library(ggplot2); library(gganimate)
+
+# Create an empty list to store the data frames
+df_list <- list()
+
+# Iterate over each entry in beta_diversity
+for (i in seq_along(beta_diversity)) {
+  # Extract the data for the current entry
+  bbs.t <- beta_diversity[[i]]
+  
+  # Create a data frame for plotting
+  df <- data.frame(
+    x = sqrt(bbs.t$beta.sne),
+    y = sqrt(bbs.t$beta.sim),
+    label = rownames(bbs.t),
+    year = rep(names(beta_diversity)[i], nrow(bbs.t))
+  )
+  
+  # Remove rows with missing values
+  df <- na.omit(df)
+  
+  # Add the data frame to the list
+  df_list[[i]] <- df
+}
+
+# Combine the data frames into a single data frame
+combined_df <- do.call(rbind, df_list)
+
+# Create the ggplot object
+p <- ggplot(combined_df, aes(x = x, y = y, label = label)) +
+  geom_point() +
+  labs(x = expression(sqrt(beta[sne])),
+       y = expression(sqrt(beta[sim])),
+       title = "Temp diff beta div {closest_state}") +
+  theme_minimal() +
+  transition_states(as.numeric(names(beta_diversity)), transition_length = 2, state_length = 1) +
+  ease_aes("linear")
+
+p
+
+# Save the animation as a GIF
+anim_save("figures/biodiversity_animation.gif", animation = p)
+
