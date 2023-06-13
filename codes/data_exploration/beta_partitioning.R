@@ -454,8 +454,14 @@ df_list <- list()
 
 # Iterate over each entry in beta_diversity
 for (i in seq_along(beta_diversity)) {
+  
   # Extract the data for the current entry
   bbs.t <- beta_diversity[[i]]
+  
+  # Convert data to numeric and remove rows with missing values
+  bbs.t$beta.sne <- as.numeric(bbs.t$beta.sne)
+  bbs.t$beta.sim <- as.numeric(bbs.t$beta.sim)
+  bbs.t <- na.omit(bbs.t)
   
   # Create a data frame for plotting
   df <- data.frame(
@@ -476,16 +482,14 @@ for (i in seq_along(beta_diversity)) {
 combined_df <- do.call(rbind, df_list)
 
 # Create the ggplot object
-p <- ggplot(combined_df, aes(x = x, y = y, label = label)) +
+p <- ggplot(combined_df, aes(x = x, y = y, label = label, frame = year)) +
   geom_point() +
   labs(x = expression(sqrt(beta[sne])),
        y = expression(sqrt(beta[sim])),
        title = "Temp diff beta div {closest_state}") +
   theme_minimal() +
-  transition_states(as.numeric(names(beta_diversity)), transition_length = 2, state_length = 1) +
+  transition_states(year, transition_length = 2, state_length = 1) +
   ease_aes("linear")
-
-p
 
 # Save the animation as a GIF
 anim_save("figures/biodiversity_animation.gif", animation = p)
