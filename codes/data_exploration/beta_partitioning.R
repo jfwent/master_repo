@@ -381,3 +381,6 @@ for (i in 1:(length(years) - 1)) {
 
 # Access the results for a specific year
 result_2005_2006 <- results[["2005_2006"]]
+
+beta_diversity <- results
+save(beta_diversity, file = "data/beta_diversity_list.rda")
