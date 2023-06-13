@@ -187,6 +187,16 @@ summary(combined_df$cluster_nr) # 150 NA's --> approx 19 per year
 
 save(combined_df, file = "data/land_use_clustered.rda")
 
+###=====
+
+changes <- combined_df %>%
+  group_by(segment, year) %>%
+  summarise(cluster_changes = n_distinct(cluster))
+
+changed_segments <- changes %>%
+  filter(cluster_changes > 1) %>%
+  arrange(desc(cluster_changes)) # O segments changed cluster
+
 ###==== previous attempt 1 ====
 
 cluster_info <- rep(NA, nrow(dat_norm))
