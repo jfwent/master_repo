@@ -252,6 +252,69 @@ bbs_2000_pair_jtu <- (bbs2000_pair_jac$beta.jtu)
 
 # bbs2000_abund_ind <- beta.multi.abund(bbs2000_abund) # takes too long to calculate
 
+#----- loop over all years (beta diversity) -----
+rm(list = ls())
+
+library(betapart)
+
+load("data/pres_abs_mat_list.rda")
+PA_mat_list <- res; rm(res)
+
+#initialize years for analysis
+years <- 2000:2021
+
+n_iter <- length(years)
+
+pb <- txtProgressBar(min = 0,      # Minimum value of the progress bar
+                     max = n_iter, # Maximum value of the progress bar
+                     style = 3,    # Progress bar style (also available style = 1 and style = 2)
+                     width = 50,   # Progress bar width. Defaults to getOption("width")
+                     char = "=")   # Character used to create the bar
+
+init <- numeric(n_iter)
+end <- numeric(n_iter)
+
+# Create an empty list to store the results
+beta_div_list <- list()
+
+for (i in 1:(length(years))) {
+  
+  init[i] <- Sys.time()
+  #---------------------
+  
+  bbs.now <- PA_mat_list[[i]]
+  
+  bbs.now[is.na(bbs.now)] <- 0
+  
+  bbs.now_core <- betapart.core(bbs.now)
+  
+  bbs.now_sor <- beta.multi(bbs.now_core, index.family = "sorensen")
+  bbs.now_jac <- beta.multi(bbs.now_core, index.family = "jaccard")
+  
+  div_ind.now <- dplyr::bind_rows(bbs.now_sor, bbs.now_jac)
+  
+  entry_name <- paste0(years[i])
+  
+  beta_div_list[[entry_name]] <- div_ind.now
+  
+  #------ progress bar ----
+  
+  end[i] <- Sys.time()
+  
+  setTxtProgressBar(pb, i)
+  time <- round(lubridate::seconds_to_period(sum(end - init)), 0)
+  
+  # Estimated remaining time based on the
+  # mean time that took to run the previous iterations
+  est <- n_iter * (mean(end[end != 0] - init[init != 0])) - time
+  remainining <- round(lubridate::seconds_to_period(est), 0)
+  
+  cat(paste(" // Execution time:", time,
+            " // Estimated time remaining:", remainining), "")
+}
+
+betadiv_2000 <- beta_div_list[[1]]
+
 #----- calculate temporal change from 2000 to 2001 ----
 
 #both matrices must contain exactly the make up: same locations and species and same order
@@ -283,7 +346,7 @@ bbs.t <- bind_cols(bbs.t.sor, bbs.t.jac)
 
 sum(is.na(bbs.t$beta.sim))
 
-#------- loop over all years ---------
+#------- loop over all years (temporal beta diversity) ---------
 rm(list=ls())
 
 load("data/pres_abs_mat_list.rda")

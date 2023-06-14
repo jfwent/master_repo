@@ -173,5 +173,9 @@ for (i in 1:(length(years) - 1)) {
 # It could be that in one year a certain abundance was detected
 # and then 0 for a year, and then again some abundance for a year
 
+save(delta_abund_list, file = "data/d_abund_list_coppee.rda")
+save(extinction_list, file = "data/extinctions_list_coppee.rda")
+save(apparition_list, file = "data/apparitions_list_coppee.rda")
+
 app_2000_2001 <- apparition_list[[1]]
 ex_2000_2001 <- extinction_list[[1]]
