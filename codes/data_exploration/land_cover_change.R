@@ -157,8 +157,8 @@ land_change_clustered <- bind_rows(results)
 save(land_change_clustered, file="data/land_change_clustered.rda")
 
 #----- find ecoregions with most cluster changes ----
-
-load("data/land_change_clustered.rda")
+library(dplyr)
+load("data/delta_land_use_clustered.rda")
 
 changes <- land_change_clustered %>%
   group_by(segment) %>%
@@ -176,10 +176,10 @@ filtered_segments <- highlighted_data %>%
   filter(cluster_changes > 3) %>%
   distinct(segment)
 
-ecoregions_with_cluster_changes <- diff_norm_filt %>%
+ecoregions_with_cluster_changes <- land_change_clustered %>%
   inner_join(filtered_segments, by = "segment") %>%
   distinct(ecoregion)
 
-print(paste0("When using the land cover change between years",
-             "the ecoregions with segments changing the most between years are found in: ",
+print(paste0("Characterizing land use change: The ecoregions with segments changing clusters ",
+             "the most often between years are found in: ",
              ecoregions_with_cluster_changes, "."))

@@ -1,5 +1,8 @@
+##############
+##### calculate the abundance change according to Coppée et al. 2022
+##############
 
-# try calculating the abundance change in the same way that Coppée et al. 2022 caluclated the abundance
+#------- load data -----
 load("data/abund_mat_list.rda")
 
 bbs2000 <- res_abund[[1]]
@@ -179,3 +182,33 @@ save(apparition_list, file = "data/apparitions_list_coppee.rda")
 
 app_2000_2001 <- apparition_list[[1]]
 ex_2000_2001 <- extinction_list[[1]]
+
+
+#----- investigate the exctinctions and apparitions for segments and species -----
+
+library(dplyr)
+
+
+extinction_data_list <- lapply(extinction_list, function(mat) {
+  colnames(mat) <- c("segment", "species")
+  return(mat)
+})
+
+appearance_data_list <- lapply(apparitions_list, function(mat) {
+  colnames(mat) <- c("segment", "species")
+  return(mat)
+})
+
+merged_data_list <- Map(function(extinction_data_list, appearance_data_list) {
+  
+  merged_data <- merge(extinction_data_list, appearance_data_list , by = c("segment", "species"), all.x = TRUE)
+  
+  segment_summary <- merged_data %>%
+    group_by(segment) %>%
+    summarize(
+      extinct_species = sum(!is.na(species.x)),
+      reappeared_species = sum(!is.na(species.y))
+    )
+  
+  return(segment_summary)
+}, extinction_data_list, appearance_data_list)

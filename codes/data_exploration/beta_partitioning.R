@@ -315,6 +315,8 @@ for (i in 1:(length(years))) {
 
 betadiv_2000 <- beta_div_list[[1]]
 
+save(beta_div_list, file = "data/beta_div_list.rda")
+
 #----- calculate temporal change from 2000 to 2001 ----
 
 #both matrices must contain exactly the make up: same locations and species and same order
