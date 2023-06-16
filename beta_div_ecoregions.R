@@ -104,18 +104,98 @@ print(paste0("Segment beta diversity in USA presence based:",
 
 
 #----- calculate beta diversity for ecoregions at segment level ----
+#load data
 rm(list=ls())
 load("data/stable_species_mat.rda")
 bbs_mat <- stable_species_mat_filtered; rm(stable_species_mat_filtered)
+PA_bbs_mat <- ifelse(bbs_mat > 0, 1, 0)
 load("data/land_use_clustered.rda")
 land <- combined_df; rm(combined_df)
 
+# extract ecoregions for segments
+segments <- rownames(bbs_mat)
+library(dplyr); library(betapart); library(lubridate)
+ecoregion_df <- land[which(land$segment %in% segments),]
+ecoregion_df <- subset(ecoregions, year == 2001)
+ecoregion_df <- ecoregions %>% select(ecoregion, cluster_nr, cluster, segment)
+ecoregion_names <- unique(ecoregion_df$ecoregion)
 
+n_iter <- length(ecoregion_names)
+
+pb <- txtProgressBar(min = 0,      # Minimum value of the progress bar
+                     max = n_iter, # Maximum value of the progress bar
+                     style = 3,    # Progress bar style (also available style = 1 and style = 2)
+                     width = 50,   # Progress bar width. Defaults to getOption("width")
+                     char = "=")   # Character used to create the bar
+
+init <- numeric(n_iter)
+end <- numeric(n_iter)
+
+beta_div_ecoregions <- list()
+
+for (ecoregion in ecoregion_names) {
+  
+  init[ecoregion] <- Sys.time()
+  #---------------------
+  
+  # Subset the segment names for the current ecoregion
+  segments <- ecoregion_df$segment[ecoregion_df$ecoregion == ecoregion]
+  
+  # Subset the bbs_mat and presence_absence_mat for the current ecoregion
+  bbs_mat_subset <- bbs_mat[segments, ]
+  presence_absence_mat_subset <- PA_bbs_mat[segments, ]
+  
+  abund_core <- betapart.core.abund(bbs_mat_subset)
+  PA_core <- betapart.core(presence_absence_mat_subset)
+  
+  # Calculate beta div for PA
+  bbs_sor <- beta.multi(PA_core, index.family = "sorensen")
+  bbs_jac <- beta.multi(PA_core, index.family = "jaccard")
+  
+  # Calculate beta div for Abund
+  bbs_abund_bray <- beta.multi.abund(abund_core, index.family = "bray")
+  bbs_abund_ruzicka <- beta.multi.abund(abund_core, index.family = "ruzicka")
+  
+  beta_multi <- dplyr::bind_cols(bbs_sor, bbs_jac, bbs_abund_bray, bbs_abund_ruzicka)
+  
+  # Store the results for the current ecoregion
+  beta_div_ecoregions[[ecoregion]] <- beta_multi
+  
+  #------ progress bar ----
+  
+  end[ecoregion] <- Sys.time()
+  
+  setTxtProgressBar(pb, ecoregion)
+  time <- round(seconds_to_period(sum(end - init)), 0)
+  
+  # Estimated remaining time based on the
+  # mean time that took to run the previous iterations
+  est <- n_iter * (mean(end[end != 0] - init[init != 0])) - time
+  remainining <- round(seconds_to_period(est), 0)
+  
+  cat(paste(" // Execution time:", time,
+            " // Estimated time remaining:", remainining), "")
+}
+
+save(beta_div_ecoregions, file = "data/beta_div_ecoregions_list.rda")
 
 #----- build cluster subset -----
+rm(list=ls())
+
+library(dplyr); library(betapart); library(lubridate)
+
+load("data/stable_species_mat.rda")
+bbs_mat <- stable_species_mat_filtered; rm(stable_species_mat_filtered)
+PA_bbs_mat <- ifelse(bbs_mat > 0, 1, 0)
 load("data/land_use_clustered.rda")
 land <- combined_df; rm(combined_df)
 
+# extract ecoregions for segments
+segments <- rownames(bbs_mat)
+ecoregion_df <- land[which(land$segment %in% segments),]
+ecoregion_df <- subset(ecoregions, year == 2001)
+ecoregion_df <- ecoregions %>% select(ecoregion, cluster_nr, cluster, segment)
+ecoregion_names <- unique(ecoregion_df$ecoregion)
 
 #----- calculate beta diversity for ecoregions at cluster level ----
 
