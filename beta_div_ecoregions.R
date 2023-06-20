@@ -73,7 +73,7 @@ stable_species_mat_filtered <- stable_species_mat[-rows_with_all_zeros, -cols_wi
 
 save(stable_species_mat_filtered, file = "data/stable_species_mat.rda")
 
-#----- calculate beta diversity for USA at segment level ----
+#----- calculate beta diversity for contig. USA at segment level ----
 rm(list = ls())
 load("data/stable_species_mat.rda")
 bbs_mat <- stable_species_mat_filtered; rm(stable_species_mat_filtered)
@@ -179,7 +179,8 @@ for (ecoregion in ecoregion_names) {
 
 save(beta_div_ecoregions, file = "data/beta_div_ecoregions_list.rda")
 
-#----- build cluster subset -----
+#----- calculate beta diversity for ecoregions at cluster level ----
+# data set up
 rm(list=ls())
 
 library(dplyr); library(betapart); library(lubridate)
@@ -191,12 +192,91 @@ load("data/land_use_clustered.rda")
 land <- combined_df; rm(combined_df)
 
 # extract ecoregions for segments
-segments <- rownames(bbs_mat)
-ecoregion_df <- land[which(land$segment %in% segments),]
-ecoregion_df <- subset(ecoregions, year == 2001)
-ecoregion_df <- ecoregions %>% select(ecoregion, cluster_nr, cluster, segment)
+segments_all <- rownames(bbs_mat)
+ecoregion_df <- land[which(land$segment %in% segments_all),]
+ecoregion_df <- subset(ecoregion_df, year == 2001)
+ecoregion_df <- ecoregion_df %>% select(ecoregion, cluster_nr, cluster, segment)
 ecoregion_names <- unique(ecoregion_df$ecoregion)
+cluster_names <- unique(ecoregion_df$cluster)
 
-#----- calculate beta diversity for ecoregions at cluster level ----
+# prepare storage
+beta_div_clusters <- list()
 
-#-----
+# Loop through each ecoregion
+for (ecoregion in ecoregion_names) {
+  
+  # Subset the segment names for the current ecoregion
+  segments.now <- ecoregion_df$segment[ecoregion_df$ecoregion == ecoregion]
+  
+  # Subset the bbs_mat and presence_absence_mat for the current ecoregion
+  bbs_mat_subset <- bbs_mat[segments.now, ]
+  presence_absence_mat_subset <- PA_bbs_mat[segments.now, ]
+  
+  # Calculate beta diversity between clusters within the ecoregion
+  cluster_names_ecoregion <- unique(ecoregion_df$cluster[ecoregion_df$ecoregion == ecoregion])
+  beta_div_clusters_ecoregion <- list()
+  
+  # Loop through each cluster within the ecoregion
+  for (cluster.now in cluster_names_ecoregion) {
+    # Subset the bbs_mat and presence_absence_mat for the current cluster
+    
+    seg_in_cluster.now <- ecoregion_df$segment[ecoregion_df$cluster == cluster.now]
+    
+    bbs_mat_cluster <- bbs_mat_subset[seg_in_cluster.now, ]
+    
+    presence_absence_mat_cluster <- presence_absence_mat_subset[seg_in_cluster.now, ]
+    
+    # Calculate beta diversity between segments within the cluster
+    abund_core <- betapart.core.abund(bbs_mat_cluster)
+    PA_core <- betapart.core(presence_absence_mat_cluster)
+    
+    # Calculate beta div for PA
+    bbs_sor <- beta.multi(PA_core, index.family = "sorensen")
+    bbs_jac <- beta.multi(PA_core, index.family = "jaccard")
+    
+    # Calculate beta div for Abund
+    bbs_abund_bray <- beta.multi.abund(abund_core, index.family = "bray")
+    bbs_abund_ruzicka <- beta.multi.abund(abund_core, index.family = "ruzicka")
+    
+    beta_multi_cluster <- dplyr::bind_cols(bbs_sor, bbs_jac, bbs_abund_bray, bbs_abund_ruzicka)
+    
+    # Store the results for the current cluster
+    beta_div_clusters_ecoregion[[cluster.now]] <- beta_multi_cluster
+  }
+  
+  # Store the beta diversity results for the current ecoregion
+  beta_div_clusters[[ecoregion]] <- beta_div_clusters_ecoregion
+}
+
+save(beta_div_clusters, file="data/beta_div_clusters_list.rda")
+
+# ----- visualize results ----
+library(dplyr)
+load("data/beta_div_clusters_list.rda")
+load("data/beta_div_ecoregions_list.rda")
+
+beta_div_ecoregions[[1]]
+
+beta_div_ecoregions_df <- bind_rows(lapply(names(beta_div_ecoregions), function(entry_name) {
+  data <- beta_div_ecoregions[[entry_name]]
+  data$ecoregion <- entry_name  # Add the name column to the data frame
+  data <- relocate(data, ecoregion, .before = beta.SIM)
+  return(data)
+}))
+
+# Printing the combined data frame
+head(beta_div_ecoregions_df)
+
+#repeat for beta div ecoregions at cluster level
+beta_div_clusters_df <- bind_rows(lapply(names(beta_div_clusters), function(entry_name) {
+  sublist <- beta_div_clusters[[entry_name]]
+  bind_rows(lapply(names(sublist), function(subentry_name) {
+    data <- sublist[[subentry_name]]
+    data$cluster_name <- paste(subentry_name)  # Add the name column to the data frame
+    data <- relocate(data, cluster_name, .before = beta.SIM)
+    return(data)
+  }))
+}))
+
+save(beta_div_clusters_df, file="data/beta_div_clusters_df.rda")
+save(beta_div_ecoregions_df, file="data/beta_div_ecoregions_df.rda")
