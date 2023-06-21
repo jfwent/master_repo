@@ -398,12 +398,37 @@ save(beta_div_clusters_df, file="data/beta_div_clusters_df.rda")
 save(beta_div_ecoregions_df, file="data/beta_div_ecoregions_df.rda")
 
 # ----- visualize results ----
-library(dplyr); library(tidyr)
+library(dplyr); library(tidyr); library(ggplot2)
 rm(list=ls())
 load("data/beta_div_clusters_df.rda")
 load("data/beta_div_ecoregions_df.rda")
+load("data/beta_div_cluster_in_ecoreg_df.rda")
 load("data/land_use_clustered.rda")
 
-clusters <- beta_div_clusters_df; rm(beta_div_clusters_df)
-ecoregion <- beta_div_ecoregions_df; rm(beta_div_ecoregions_df)
+seg_clusters <- beta_div_clusters_df; rm(beta_div_clusters_df)
+seg_ecoreg <- beta_div_ecoregions_df; rm(beta_div_ecoregions_df)
+clust_ecoreg <- beta_div_cluster_in_ecoreg_df; rm(beta_div_cluster_in_ecoreg_df)
 land_use <- combined_df; rm(combined_df)
+
+summary(clust_ecoreg)
+box_df <- dplyr::inner_join(seg_ecoreg, clust_ecoreg, by = "ecoregion")
+
+box_df <- box_df %>%
+  pivot_longer(
+    cols = !ecoregion,
+    names_to = "indices",
+    values_to = "betadiv"
+  )
+box_df_sep <- separate(box_df, col = "indices", into = c("1", "2", "3", "Level"))
+box_df_sep$Level <- ifelse(is.na(box_df_sep$Level), box_df_sep$"3", box_df_sep$Level)
+box_df_sep$index <- ifelse(box_df_sep$"3" %in% c("BAL", "GRA"),
+                           paste(box_df_sep$"2", box_df_sep$"3", sep = "_"),
+                           box_df_sep$"2")
+box_df_sep <- subset(box_df_sep, select = c(Level, index, betadiv, ecoregion))
+
+
+
+ggplot(box_df_sep, aes(x = index, y = betadiv, fill = Level)) +
+  geom_boxplot() +
+  theme_minimal() +
+  scale_x_discrete(guide = guide_axis(angle = 45))
