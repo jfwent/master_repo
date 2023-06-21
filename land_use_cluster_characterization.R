@@ -1,13 +1,13 @@
 # cluster characterization
 
 
-##---- land use -----
-#---- load data----
+###---- **LAND USE** -----
+  #---- load data----
 rm(list=ls())
 load("data/land_use_clustered.rda")
 land <- combined_df; rm(combined_df)
 
-#---- find dominant land cover in cluster and assign name -----
+  #---- find dominant land cover in cluster and assign name -----
 library(dplyr)
 
 years <- sort(unique(land$year))
@@ -47,8 +47,8 @@ cluster_means <- relocate(cluster_means, dominant_habitat, .before = urban_mean)
 
 # Side note: Blue_Mountains_2 dominant habitat is other, consider leaving this out?
 
-#---- plot dominant habitats ----
-library(plotly)
+  #---- plot dominant habitats ----
+library(plotly); library(viridis)
 
 # Abbreviate cluster names
 cluster_means$cluster_abbrev <- abbreviate(cluster_means$cluster, minlength = 4)
@@ -67,7 +67,7 @@ ggplot(cluster_means, aes(x = year, y = cluster_abbrev, fill = dominant_habitat)
   scale_y_discrete(expand = c(0, 0.5)) +
   scale_x_continuous(breaks = unique(cluster_means$year))
 
-##### try again with subplots
+##### make subplots for better readability of plots 
 
 # Identify the unique clusters
 unique_clusters <- sort(unique(cluster_means$cluster))
@@ -78,6 +78,7 @@ clusters_per_subplot <- ceiling(length(unique_clusters) / num_subplots)
 
 # Create a list to store the subplots
 subplot_list <- list()
+subplot_list_abbrev <- list()
 
 # Loop through the clusters and create subplots
 for (i in 1:num_subplots) {
@@ -104,10 +105,24 @@ for (i in 1:num_subplots) {
     scale_fill_manual(values = color_palette) +
     theme_minimal() +
     scale_y_discrete(expand = c(0, 0.5)) +
-    scale_x_continuous(breaks = unique(dominant_clusters$year)) +
+    scale_x_continuous(breaks = unique(dominant_clusters$year),
+                       guide = guide_axis(angle = 45)) +
     ggtitle(paste("Subplot", i))  # Add subplot title
   
   subplot_list[[i]] <- subplot
+  
+  # create subplot with abbreviated names
+  subplot_abbrev <- ggplot(dominant_clusters, aes(x = year, y = cluster_abbrev, fill = dominant_habitat)) +
+    geom_tile() +
+    labs(x = "Year", y = "Cluster", fill = "Dominant Habitat") +
+    scale_fill_manual(values = color_palette) +
+    theme_minimal() +
+    scale_y_discrete(expand = c(0, 0.5)) +
+    scale_x_continuous(breaks = unique(dominant_clusters$year),
+                       guide = guide_axis(angle = 45)) +
+    ggtitle(paste("Subplot", i))  # Add subplot title
+  
+  subplot_list_abbrev[[i]] <- subplot_abbrev
 }
 
 subplot_list[[1]]
@@ -115,11 +130,19 @@ subplot_list[[2]]
 subplot_list[[3]]
 subplot_list[[4]]
 
+subplot_list_abbrev[[1]]
+subplot_list_abbrev[[2]]
+subplot_list_abbrev[[3]]
+subplot_list_abbrev[[4]]
+
 dominant_habitat_plots <- subplot_list
 
-save(dominant_habitat_plots, file="figures/dominant_habitats_plots.rda")
+dominant_habitat_plots_abbrev <- subplot_list_abbrev
 
-#---- identify + plot habitat switches ----
+save(dominant_habitat_plots, file="figures/dominant_habitats_plots.rda")
+save(dominant_habitat_plots_abbrev, file="figures/dominant_habitat_plots_abbrev.rda")
+
+  #---- identify + plot habitat switches ----
 
 library(ggplot2); library(viridis)
 
@@ -136,17 +159,62 @@ switched_clusters$cluster_abbrev <- abbreviate(switched_clusters$cluster, minlen
 color_palette <- viridis(n = length(unique(switched_clusters$dominant_habitat)), option = "D")
 
 # Visualize the switched clusters
-ggplot(switched_clusters, aes(x = year, y = factor(cluster_abbrev), fill = dominant_habitat)) +
+hab_switch_fig <- ggplot(switched_clusters, aes(x = year, y = factor(cluster_abbrev), fill = dominant_habitat)) +
   geom_tile() +
   labs(x = "Year", y = "Cluster", fill = "Dominant Habitat") +
   scale_fill_manual(values = color_palette) +
   theme_minimal() +
   scale_y_discrete(expand = c(0, 0.5)) +
-  scale_x_continuous(breaks = unique(switched_clusters$year))
+  scale_x_continuous(breaks = unique(switched_clusters$year),
+                     guide = guide_axis(angle = 45))
 
-##---- land use change ----
-#---- recluster the land use change data based on the initial cluster of the ecoregion ----
+jpeg(file="figures/hab_switch_fig.jpeg")
+hab_switch_fig
+dev.off()
+
+
+###---- **DELTA LAND USE** ----
+  #---- find out if clusters match ----
+library(tidyr); library(dplyr)
+
 rm(list=ls())
 
+load("data/land_use_clustered.rda")
+land_use <- combined_df; rm(combined_df)
+load("data/delta_land_use_clustered.rda")
+delta_land_use <- land_change_clustered; rm(land_change_clustered)
 
-#----- 
+delta_land_use <- delta_land_use %>%
+  separate(year, into = c("year1", "year2"), sep = "_", remove = F)
+
+delta_land_use <- delta_land_use %>%
+  unite(col = "cluster", c("ecoregion", "cluster_nr"), sep = "_", remove = F)
+
+
+# Get unique years from land_use_change_data
+years <- unique(delta_land_use$year1)
+# years <- sort(unique(land_use$year))
+
+# Iterate over each year and check if clusters match
+for (year in years) {
+  # Subset land_use_data for the current year
+  land_use_data_year <- subset(land_use, year == year)
+  
+  # Subset land_use_change_data for the current year
+  land_use_change_data_year <- subset(delta_land_use, year1 == year)
+  
+  # Perform an inner join based on common columns
+  merged_data <- inner_join(land_use_data_year, land_use_change_data_year,
+                            by = c("segment", "ecoregion", "cluster"))
+  
+  # Check if segments are in the same cluster for the current year
+  if (nrow(merged_data) > 0) {
+    print(paste("Segments are in the same cluster for year", year))
+  } else {
+    print(paste("Segments are not in the same cluster for year", year))
+  }
+}
+
+
+  #---- recluster the land use change data based on the initial cluster of the ecoregion ----
+  #----- 
