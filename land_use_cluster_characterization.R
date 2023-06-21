@@ -73,7 +73,7 @@ ggplot(cluster_means, aes(x = year, y = cluster_abbrev, fill = dominant_habitat)
 unique_clusters <- sort(unique(cluster_means$cluster))
 
 # Divide the clusters into groups for subplots
-num_subplots <- 4
+num_subplots <- 6
 clusters_per_subplot <- ceiling(length(unique_clusters) / num_subplots)
 
 # Create a list to store the subplots
@@ -135,6 +135,11 @@ subplot_list_abbrev[[2]]
 subplot_list_abbrev[[3]]
 subplot_list_abbrev[[4]]
 
+
+tiff("figures/dom_hab_p6.tiff", units="in", width=5, height=5, res=300)
+subplot_list[[6]]
+dev.off()
+
 dominant_habitat_plots <- subplot_list
 
 dominant_habitat_plots_abbrev <- subplot_list_abbrev
@@ -168,10 +173,9 @@ hab_switch_fig <- ggplot(switched_clusters, aes(x = year, y = factor(cluster_abb
   scale_x_continuous(breaks = unique(switched_clusters$year),
                      guide = guide_axis(angle = 45))
 
-jpeg(file="figures/hab_switch_fig.jpeg")
+tiff("figures/hab_switch_fig.tiff", units="in", width=5, height=5, res=300)
 hab_switch_fig
 dev.off()
-
 
 ###---- **DELTA LAND USE** ----
   #---- find out if clusters match ----

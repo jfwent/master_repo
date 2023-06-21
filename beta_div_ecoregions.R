@@ -356,7 +356,7 @@ for (ecoregion in ecoregion_names) {
   beta_div_clusters[[ecoregion]] <- beta_multi_cluster
 }
 
-# convert list to data frame
+# convert lists to data frame
 beta_div_cluster_in_ecoreg_df <- bind_rows(lapply(names(beta_div_clusters), function(entry_name) {
   data <- beta_div_clusters[[entry_name]]
   data$ecoregion <- entry_name  # Add the name column to the data frame
@@ -364,6 +364,15 @@ beta_div_cluster_in_ecoreg_df <- bind_rows(lapply(names(beta_div_clusters), func
   return(data)
 }))
 
+abund_clusters_df <- bind_rows(lapply(names(abundance_matrices), function(entry_name) {
+  data <- as.data.frame(abundance_matrices[[entry_name]])
+  data$ecoregion <- entry_name  # Add the name column to the data frame
+  data <- relocate(data, ecoregion, .before = Actitis_macularius)
+  return(data)
+}))
+
+abund_clusters_mat <- as.matrix(abund_clusters_df[-1])
+save(abund_clusters_mat, file="data/abund_clusters_mat.rda")
 save(beta_div_cluster_in_ecoreg_df, file="data/beta_div_cluster_in_ecoreg_df.rda")
 
 #---- save lists as data frames ----
@@ -398,7 +407,7 @@ save(beta_div_clusters_df, file="data/beta_div_clusters_df.rda")
 save(beta_div_ecoregions_df, file="data/beta_div_ecoregions_df.rda")
 
 # ----- visualize results ----
-library(dplyr); library(tidyr); library(ggplot2)
+library(dplyr); library(tidyr); library(ggplot2); library(viridis)
 rm(list=ls())
 load("data/beta_div_clusters_df.rda")
 load("data/beta_div_ecoregions_df.rda")
@@ -419,16 +428,36 @@ box_df <- box_df %>%
     names_to = "indices",
     values_to = "betadiv"
   )
+
 box_df_sep <- separate(box_df, col = "indices", into = c("1", "2", "3", "Level"))
 box_df_sep$Level <- ifelse(is.na(box_df_sep$Level), box_df_sep$"3", box_df_sep$Level)
+box_df_sep$Level <- ifelse(box_df_sep$Level == "x", "segment", "cluster")
 box_df_sep$index <- ifelse(box_df_sep$"3" %in% c("BAL", "GRA"),
                            paste(box_df_sep$"2", box_df_sep$"3", sep = "_"),
                            box_df_sep$"2")
 box_df_sep <- subset(box_df_sep, select = c(Level, index, betadiv, ecoregion))
 
+box_df_sep$index <- with(box_df_sep, reorder(index, betadiv, median))
 
+# Set the number of colors you want to choose
+num_colors <- 2
 
-ggplot(box_df_sep, aes(x = index, y = betadiv, fill = Level)) +
+# Choose colorblind-friendly colors from the viridis palette
+my_colors <- viridis(num_colors, option = "D")
+
+beta_div_ecoreg_levels <- ggplot(box_df_sep,
+                                 aes(x = index, y = betadiv, fill = Level)) +
   geom_boxplot() +
-  theme_minimal() +
+  ylab("Beta diversity") +
+  xlab("Index") +
+  ggtitle("Beta diversity in ecoregions of the USA") +
+  theme(axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10)
+  ) +
+  scale_fill_manual(values = my_colors) +
   scale_x_discrete(guide = guide_axis(angle = 45))
+
+tiff("figures/beta_div_ecoreg_levels.tiff", units="in", width=5, height=5, res=300)
+beta_div_ecoreg_levels
+dev.off()
+
