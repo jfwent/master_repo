@@ -41,7 +41,5 @@ seg_rare <- rarefy(stable_species_mat_filtered, 100)
 plot(spec_nr_seg, seg_rare, xlab = "Observed No. of Species",
      ylab = "Rarefied No. of Species")
 
-
-
 #---------- rarefaction of cluster of ecoregions ----
 
