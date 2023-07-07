@@ -8,6 +8,7 @@ rm(list=ls())
 #----- data sets -----
 
 load("data/land_use_clustered.rda")
+land_use_clustered <- combined_df;rm(combined_df)
 
 load("data/delta_land_use_clustered.rda")
 
@@ -41,7 +42,21 @@ load("data/stable_species_mat.rda")
 # - filter these for terrestrial birds?
 # - Group: non-migratory passerines? Habitat specialists? Feeding niches? Generation time?
 
+# added the Bird et al., 2020 Cons Biol data to the BBS survey data
+load("data/BBS_Bird_df.rda")
+load("data/BBS_Bird_stable_df.rda")
+
+# rarified the clusters
+load("data/clust_rare.rda")
+
+# calculated the probability to observe species in cluster
+load("data/clust_species_probability.rda")
+
+# 
+
 #------ plots -----
+
+# really busy plots about the 
 load("figures/ecoreg_plots.rda")
 Ecoreg_plots[[1]]
 
@@ -49,12 +64,17 @@ load("figures/beta_diversity_plot_list.rda")
 # sqrt(sim --> turnover/simpson pair-wise dissimilarity)
 # vs sqrt(sne --> nestedness fraction of Sorensen pair-wise dissimilarity)
 
-#habitats in clusters
-load("figures/dominant_habitat_plots_abbrev.rda")
-load("figures/dominant_habitats_plots.rda")
+#beta diversity:
+# comparing the beta diversity calculated for clusters at segment and at cluster level
+# --> figure/beta_div_ecoreg_levels.tiff
 
-#habitat switches
-load()
+# dominant habitats in clusters
+load("figures/dominant_habitat_plots_abbrev.rda") # with abbreviated cluster names
+load("figures/dominant_habitats_plots.rda") # with full cluster names
+
+dominant_habitat_plots[[3]]
+#habitat switches --> figures/hab_switch_fig.tiff
+
 
 
 
