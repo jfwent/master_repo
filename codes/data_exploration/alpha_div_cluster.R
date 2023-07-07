@@ -100,13 +100,15 @@ for(i in seq_along(years)){
                  names_to = "metric")
 }
 
+# rename
 names(alpha_div_clusters) <- years
 names(alpha_div_segments) <- years
 names(alpha_div_ecoregions) <- years
 
+# have a look at one entry to check if everything is as expected
 alpha_div_clusters_2003 <- alpha_div_clusters[[1]]
 
-#---- test here
+#---- convert lists to data frames
 
 alpha_div_cluster_df <- bind_rows(lapply(names(alpha_div_clusters), function(entry_name) {
   data <- alpha_div_clusters[[entry_name]]
@@ -130,3 +132,7 @@ alpha_div_ecoregion_df <- bind_rows(lapply(names(alpha_div_ecoregions), function
 }))
 
 # save the data ------
+
+save(alpha_div_cluster_df, file = "data/alpha_div_cluster_df.rda")
+save(alpha_div_ecoregion_df, file = "data/alpha_div_ecoregion_df.rda")
+save(alpha_div_segments_df, file = "data/alpha_div_segments_df.rda")
