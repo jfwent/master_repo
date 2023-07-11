@@ -80,6 +80,9 @@ land_ecoregion <- land %>%
 
 ecoregion_full_df <- merge(alpha_div_eco_sub, land_ecoregion, by = c("ecoregion", "year"))
 
+# ----- add data from cumulated first three years -----
+
+
 # ----- save the data frames -----
 
 save(ecoregion_full_df, file= "data/ecoregion_full_df.rda")

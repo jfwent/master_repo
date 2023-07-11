@@ -9,3 +9,6 @@ library(brms)
 
 # -------- load data -------------
 
+load("data/ecoregion_full_df.rda")
+load("data/segments_full_df.rda")
+load("data/cluster_full_df.rda")
