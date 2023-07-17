@@ -2,6 +2,14 @@
 # Author: Jon Went, jwent@ethz.ch
 # Date: 06.06.2023
 
+
+# I thought that I can filter with a simple dplyr code the stable species and did not get the same result as when
+# melting my previously computed stable species matrix. Therefore I reinvestigated this.
+# During this reinvestigating, I could confirm that my originally computed stable_species matrix was correct
+# whereas the dplyr code (line 80-86) to filter the BBS_df somehow misses 84 bird+segment combinations, that should be included
+# a problem could be with the multiple entries for a species+segment+year combination for example for corvus brachyrhynchos
+
+
 # load libraries ------
 library(vegan)
 library(dplyr)
@@ -26,7 +34,7 @@ cluster_names <- unique(ecoregion_df$cluster)
 
 load("data/Lica/BBS_partition_abundance.rda")
 
-# --- calculate the alpha diversity indices for stable species for average abundance of years 2000, 2001, 2002
+# --- calculate the alpha diversity indices for stable species for average abundance of years 2000, 2001, 2002 ----
 stable_species <- colnames(species_mat)
 first_years <- 2000:2002
 
@@ -52,10 +60,7 @@ av_merged <- merge(averaged_df, land_sub, by.x = "partition", by.y = "segment")
 seg_first <- unique(averaged_df$partition)
 animal_first <- unique(averaged_df$animal_jetz)
 
-library(reshape2)
-
-# Assuming your matrix is named 'abundance_matrix'
-long_df <- melt(species_mat, varnames = c("segment", "animal_jetz"), value.name = "avg_abundance")
+long_df <- reshape2::melt(species_mat, varnames = c("segment", "animal_jetz"), value.name = "avg_abundance")
 
 long_df_sub <- long_df %>%
   filter(avg_abundance > 0)
@@ -66,6 +71,40 @@ stable_birds_long <- unique(long_df_sub$animal_jetz)
 stable_seg_long <- unique(long_df_sub$segment)
 
 # ----- reinvestigate the stable species -----
+
+BBS_first <- BBS_df %>%
+  filter(year %in% c(2000:2002)) %>%
+  group_by(animal_jetz, segment) %>%
+  filter(animal_jetz == "Actitis_macularius")
+
+BBS_stable <- BBS_df %>%
+  filter(year %in% c(2000:2002)) %>%
+  group_by(animal_jetz, segment) %>%
+  filter(all(seg_abundance >0),
+         n_distinct(year) == 3) %>%
+  summarize(avg_seg_abundance = mean(seg_abundance),
+            sd_seg_abundance = sd(seg_abundance))
+
+load("data/stable_species_mat.rda")
+species_mat <- stable_species_mat_filtered; rm(stable_species_mat_filtered)
+
+stable_df <- reshape2::melt(species_mat, varnames = c("segment", "animal_jetz"), value.name = "avg_abundance")
+
+stable_df <- stable_df %>%
+  filter(avg_abundance >0)
+
+unmatched_combinations <- anti_join(stable_df, BBS_stable, by = c("segment", "animal_jetz"))
+matched_combinations <- semi_join(stable_df, BBS_stable, by = c("segment", "animal_jetz"))
+
+unmatched_segs <- unique(unmatched_combinations$segment)
+unmatched_birds <- unique(unmatched_combinations$animal_jetz)
+
+# When reinvestigating, I can confirm that my originally computed stable_species matrix was correct
+# whereas the dplyr code above to filter the BBS_df somehow misses 84 bird+segment combinations, that should be included
+# a problem could be with the multiple entries for a species+segment+year combination for example for corvus brachyrhynchos
+
+
+#------ construction work below ----
 first_years <- 2000:2002
 
 BBS_stable <- BBS_partition_abundance %>%
@@ -88,6 +127,4 @@ stable_birds <- unique(BBS_stable$animal_jetz)
 seg_stable_control <- unique(BBS_stable$partition)
 
 all_birds <- unique(BBS_partition_abundance$animal_jetz)
-
-rm(list=ls())
 

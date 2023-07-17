@@ -1,4 +1,4 @@
-#Alpha diversity calculations + data base creation
+#Alpha diversity calculations years 2000-2002
 #Author: Jon Went, jwent@ethz.ch
 #Date: 11.06.2023
 
@@ -15,9 +15,7 @@ load("data/land_use_clustered.rda")
 land_clustered <- combined_df; rm(combined_df)
 
 load("data/Lica/BBS_land_years.rda")
-ecoregions_txt <- read.table("data/Lica/US_ecoregions.txt")
-
-BBS_land_txt <- read.table("/Users/jonwent/polybox/Master thesis/BBS.land.years.txt")
+ecoregions_txt <- read.table("data/Lica/US_ecoregions.txt", header = T)
 
 #bird data
 load("data/Lica/BBS_partition_abundance.rda")
@@ -25,6 +23,11 @@ BBS_df <- BBS_partition_abundance; rm(BBS_partition_abundance)
 
 BBS_df <- BBS_df %>%
   rename(segment = partition)
+
+# stable species matrix
+load("data/stable_species_mat.rda")
+species_mat <- stable_species_mat_filtered; rm(stable_species_mat_filtered)
+
 
 # ----- prepare land use data  ---- 
 
@@ -44,7 +47,7 @@ land_sub_clust <- land_clustered %>%
 land_merged <- merge(land_sub, land_sub_clust, by= c("segment", "year"))
 
 matches <- land_sub$segment %in% land_sub_clust$segment
-sum(matches == FALSE)
+sum(matches == FALSE) # 48 segments missing across 8 years = 6 segments/year
 
 missing_segs <- subset(land_sub, !matches)
 # There are fewer segments in the clustered dataframe bc only ecoregions with more than one segment could be clustered
@@ -68,35 +71,36 @@ full_df <- left_join(BBS_df, land_complete, by = c("segment", "year"))
 
 # ------ get species+segments with abundance > 0 for all years 2000-2001-2002 ----
 
-BBS_stable <- BBS_df %>%
-  filter(year %in% c(2000:2002)) %>%
-  group_by(animal_jetz, segment) %>%
-  summarize(avg_seg_abundance = if (all(seg_abundance > 0)) mean(seg_abundance) else NA,
-            sd_seg_abundance = if (all(seg_abundance > 0)) sd(seg_abundance) else NA) %>%
-  filter(!is.na(avg_seg_abundance))
+# melt matrix into long df
+stable_df <- reshape2::melt(species_mat, varnames = c("segment", "animal_jetz"), value.name = "avg_abundance")
 
-BBS_stable_full <- left_join(BBS_stable, land_complete[land_complete$year == 2001,], by = "segment")
+#filter all segments with avg_abundance == 0
+stable_df <- stable_df %>%
+  filter(avg_abundance > 0)
 
-sum(is.na(BBS_stable_full$cluster))
+# ------ calculate alpha diversity first three years -----
 
-seg_land_first <- unique(BBS_land_txt[BBS_land_txt$year == 2001,]$partition)
-seg_BBS_first <- unique(BBS_df[BBS_df$year %in% 2001,]$segment)
+stable_full_df <- left_join(stable_df, land_complete[land_complete$year == 2001,], by = "segment")
 
-# ------ calculate alpha diversity -----
+BBS_stable_alpha_seg <- stable_df %>%
+  group_by(segment) %>%
+  summarize(richness = specnumber(avg_abundance),
+            shannon = diversity(avg_abundance, index = "shannon"),
+            simpson = diversity(avg_abundance, index = "simpson"),
+            invsimpson = diversity(avg_abundance, index = "invsimpson"),
+            n_birds = sum(avg_abundance))
 
-BBS_stable_alpha_seg <- BBS_stable %>%
-  group_by(partition) %>%
-  summarize(richness = specnumber(avg_seg_abundance),
-            shannon = diversity(avg_seg_abundance, index = "shannon"),
-            simpson = diversity(avg_seg_abundance, index = "simpson"),
-            invsimpson = 1/simpson)
-
-BBS_stable_alpha_clust <- BBS_stable_full %>%
+BBS_stable_alpha_cluster <- stable_full_df %>%
+  filter(!is.na(cluster)) %>%
   group_by(cluster) %>%
-  summarize(richness = specnumber(avg_seg_abundance),
-            shannon = diversity(avg_seg_abundance, index = "shannon"),
-            simpson = diversity(avg_seg_abundance, index = "simpson"),
-            invsimpson = 1/simpson)
+  summarize(richness = specnumber(avg_abundance),
+            shannon = diversity(avg_abundance, index = "shannon"),
+            simpson = diversity(avg_abundance, index = "simpson"),
+            invsimpson = diversity(avg_abundance, index = "invsimpson"),
+            n_birds = sum(avg_abundance),
+            n_segments = length(segment))
+
+length(unique(land_clustered[land_clustered$year == 2001,]$cluster))
 
 #---- merge land + BBS data sets for years 2000:2002
 
