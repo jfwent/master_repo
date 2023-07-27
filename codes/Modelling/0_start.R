@@ -9,6 +9,12 @@ library(brms)
 
 # -------- load data -------------
 
-load("data/ecoregion_full_df.rda")
-load("data/segments_full_df.rda")
-load("data/cluster_full_df.rda")
+load("data/database/ecoregion_stable_df.rda")
+load("data/database/segments_stable_df.rda")
+load("data/database/cluster_stable_df.rda")
+
+load("data/database/ecoregion_full_df.rda")
+load("data/database/segments_full_df.rda")
+load("data/database/cluster_full_df.rda")
+
+# --------- what more does the start need? -----

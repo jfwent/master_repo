@@ -35,6 +35,21 @@ bird_groups_df$animal_jetz <- gsub(" ", "_", bird_df$Scientific_name)
 bird_groups_df <- bird_groups_df %>%
   relocate("animal_jetz", .before = "Scientific_name")
 
+# ---- select columns I want to keep ----
+
+bird_df_sub <- bird_df %>%
+  select(-c(1:6,8))
+
+bird_groups_df_sub <- bird_groups_df %>%
+  select(-c(1:3,5))
+
+# ---- join BBS data with data frames ---
+
+Bird_full <- bird_df_sub %>%
+  left_join(bird_groups_df_sub, by = "animal_jetz")
+
+BBS_bird <- BBS_df %>%
+  left_join(Bird_full, by = "animal_jetz")
 
 #----- get unique species -----
 # get unique species in Bird data frame
@@ -72,5 +87,5 @@ desired_columns_stable2 <- bird_ecol_traits_stable[matches_stable2, 6:21]
 BBS_sub_stable <- cbind(BBS_stable_sub, desired_columns_stable2)
 
 #----- save files ----
-save(BBS_sub, file = "data/BBS_Bird_df.rda")
+save(BBS_bird, file = "data/BBS_Bird_df.rda")
 save(BBS_sub_stable, file = "data/BBS_Bird_stable_df.rda")
