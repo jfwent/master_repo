@@ -68,7 +68,7 @@ land_use_area <- land_use_pxsum_eco %>%
   ) %>%
   select(-c(4:12)) %>%
   rowwise() %>%
-  mutate(tot.area = sum(urban.tot.area.m2,
+  mutate(tot.area.m2 = sum(urban.tot.area.m2,
                         forest.area.m2,
                         grass.area.m2,
                         pasture.area.m2,
@@ -77,7 +77,7 @@ land_use_area <- land_use_pxsum_eco %>%
                         barren.area.m2))
 
 
-# ---- get only ecoregions that have at > 2 segments ----
+# ---- get only ecoregions that have > 2 segments ----
 
 land_use_pxsum_sub <- land_use_pxsum_eco %>%
   group_by(ecoregion, year) %>%
@@ -96,7 +96,7 @@ land_use_area_sub <- land_use_area %>%
   select(-c(3:5, tot_segments))
 
 
-# ---- function for pxsum ----
+# ---- clustering function for pxsum ----
 
 cluster_data <- function(df, year, ecoregion, clust_method = "ward.D2") {
   
@@ -190,3 +190,5 @@ summary(land_use_pxsum_clustered$cluster_nr) # 15 NA's
 
 # ---- save files ----
 
+save(land_use_area, file = "data/land_use_area.rda")
+save(land_use_pxsum_eco, file = "data/land_use_pxsum.rda")

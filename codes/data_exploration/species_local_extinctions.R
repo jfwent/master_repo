@@ -20,13 +20,29 @@ eco_txt <- read.table("data/Lica/US_ecoregions.txt", header = T, sep = "") %>%
 # --- simple data transformations ----
 
 BBS_df <- BBS_bird %>%
-  rename(segment = partition)
+  rename(segment = partition) %>%
+  group_by(year, segment, animal_jetz) %>%
+  summarize(seg_abund = sum(seg_abundance)) %>%
+  ungroup() %>%
+  group_by(segment, animal_jetz) %>%
+  mutate(
+    three_year_window = paste0(year - 1, "_", year + 1),
+    occurred = ifelse(
+      year == min(year) | year == max(year),
+      (seg_abund != 0),
+      (seg_abund != 0 | lead(seg_abund != 0) | lag(seg_abund != 0))
+    )
+  ) %>%
+  ungroup() %>%
+  mutate(occurred = ifelse(three_year_window %in% c("1999_2001", "2018_2020"), NA, occurred))
 
 rm(BBS_bird)
 
+
+
 # filter to keep only terrestrial species
 BBS_sub <- BBS_df %>%
-  select(-c(2:7)) %>%
+  select(-c(2:8)) %>%
   filter(Marine != 1, 
          Freshwater != 1,
          Nocturnal != 1)
@@ -70,14 +86,20 @@ disappeared <- BBS_sub %>%
   group_by(segment, animal_jetz) %>%
   mutate(total_entries = n()) %>%
   filter(total_entries == 3) %>%
-  na.omit()
-
-disappeared %>%
+  na.omit() %>%
   group_by(segment, animal_jetz) %>%
   summarize(total_combinations = n()) # there are 669 combinations of species + segment
 
 length(unique(disappeared$animal_jetz)) # 112 species don't appear anymore at a segment in 2017-2019
 length(unique(disappeared$segment)) # at 552 segments disappearances happen
+
+# add the disappearance to the stable birds
+
+BBS_stable_extinct_in_2019 <- BBS_stable %>%
+  # inner_join(disappeared, by = c("animal_jetz", "segment"))
+  left_join(disappeared, by = c("segment", "animal_jetz")) %>%
+  mutate(extinct = ifelse(is.na(total_combinations), 0, 1)) %>%
+  select(-total_combinations)
 
 # --- find all segments and periods where bird species disappear ----
 
@@ -109,7 +131,6 @@ BBS_stable_sub %>%
   group_by(segment, animal_jetz, .add = T) %>%
   group_split() %>%
   bind_rows()
-
 
 # birds that are not present anymore in all years post-2002
 locally_absent <- BBS_stable_sub %>%
@@ -145,6 +166,32 @@ BBS_stable %>%
   filter(animal_jetz %in% absent_birds) %>%
   group_by(segment, animal_jetz)
 
+
+# create data frame with each three year period with a FALSE if the bird is not observed and TRUE if the bird is observed
+BBS_periods <- BBS_stable %>%
+  group_by(segment, animal_jetz) %>%
+  mutate(
+    three_year_window = paste0(year - 1, "_", year + 1),
+    occurred = ifelse(
+      year == min(year) | year == max(year),
+      (seg_abund != 0),
+      (seg_abund != 0 | lead(seg_abund != 0) | lag(seg_abund != 0))
+    )
+  ) %>%
+  ungroup()
+
+
+  # pivot_wider(
+  #     id_cols = c(segment, animal_jetz),
+  #     names_from = three_year_window,
+  #     values_from = occurred,
+  #     values_fill = NA
+  #   ) %>%
+  #   rename_with(~ paste0(.), starts_with("2")) %>%
+  # #   ungroup() %>%
+  # filter(animal_jetz == "Archilochus_colubris",
+  #        segment == "02_001_5")
+
 # ---- moving averages for simple abundance trends ----
 
 # Calculate moving averages for the segments abundances
@@ -170,7 +217,7 @@ test2 %>%
   # geom_line() +
   # geom_point() +
   labs(x = "Year", y = "Average Moving Average",
-       title = "Abundance trends by Bird species") +
+       title = "Abundance trends by bird species for whole US") +
   theme(legend.position = "none")
 
 test %>%
@@ -181,7 +228,7 @@ test %>%
   # geom_line() +
   # geom_point() +
   labs(x = "Year", y = "Average Moving Average",
-       title = "Abundance trends by bird species and year") +
+       title = "Abundance trends by bird species for ecoregions") +
   theme(legend.position = "none")
 
 

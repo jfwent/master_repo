@@ -43,6 +43,11 @@ bird_df_sub <- bird_df %>%
 bird_groups_df_sub <- bird_groups_df %>%
   select(-c(1:3,5))
 
+# --- join Bird data sets and save ----
+
+Bird_full_df <- inner_join(bird_df_sub, bird_groups_df_sub, by = "animal_jetz")
+save(Bird_full_df, file="data/Bird_full_df.rda")
+
 # ---- join BBS data with data frames ---
 
 Bird_full <- bird_df_sub %>%
