@@ -38,8 +38,6 @@ BBS_df <- BBS_bird %>%
 
 rm(BBS_bird)
 
-
-
 # filter to keep only terrestrial species
 BBS_sub <- BBS_df %>%
   select(-c(2:8)) %>%

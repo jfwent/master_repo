@@ -12,7 +12,7 @@ rm(list=ls())
 ext <- extent(-125,-67, 25, 50)
 
 ## Mean annual air temperature
-mean.ann.air <- raster("/Users/jonwent/Downloads/CHELSA_bio1_1981-2010_V.2.1.tif")
+mean.ann.air <- raster("/Users/jonwent/Desktop/ETHZ/master_thesis/Climate_data/CHELSA_bio1_1981-2010_V.2.1.tif")
 plot(mean.ann.air)
 
 mean.ann.air.crop <- crop(mean.ann.air, ext, filename = "data/bio1_1981-2010_MeanAnnualAirTemperatureCropped.tif")
