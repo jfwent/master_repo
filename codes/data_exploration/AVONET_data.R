@@ -8,7 +8,7 @@ library(readxl); library(tidyverse)
 rm(list = ls())
 
 #------ read data ----
-?read_xlsx
+
 AVONET_BirdLife <- read_xlsx("other_studies/AVONET_2022/AVONET_Supplementary_dataset_1.xlsx",
                              sheet = "AVONET1_BirdLife")
 AVONET_eBird <- read_xlsx("other_studies/AVONET_2022/AVONET_Supplementary_dataset_1.xlsx",
