@@ -160,11 +160,3 @@ hfp_df <- hfp_df %>%
   )
 
 save(hfp_df, file = "data/human_footprint_df.rda")
-
-# ----- baustelle 
-
-#find appropriate crs projection
-# crsuggest::suggest_crs(BBS_routes, type = "projected")
-
-# extract geometry
-# BBS_route_geometry <- sf::st_geometry(BBS_routes)
