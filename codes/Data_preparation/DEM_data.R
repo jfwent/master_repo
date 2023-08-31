@@ -57,14 +57,14 @@ plot(elevation_epsg5070)
 elevation_data_epsg5070 <- tibble(partition = BBS_routes$partition,
                          elev.mean = exact_extract(elevation_epsg5070, BBS_routes, "mean"),
                          elev.sd = exact_extract(elevation_epsg5070, BBS_routes, "stdev")) %>%
-  mutate(elev = round(elev.mean, 3),
+  mutate(elev.mean = round(elev.mean, 3),
          elev.sd = round(elev.sd, 3))
 
 elevation_data_epsg4326 <- tibble(partition = BBS_routes_epsg4326$partition,
                          elev.mean = exact_extract(elevation, BBS_routes_epsg4326, "mean"),
                          elev.sd = exact_extract(elevation, BBS_routes_epsg4326, "stdev")) %>%
-  mutate(elev = round(elev.mean, 3),
+  mutate(elev.mean = round(elev.mean, 3),
          elev.sd = round(elev.sd, 3))
 
-# save(elevation_data, file = "data/elevation/elevation.rda")
-
+save(elevation_data_epsg5070, file = "data/elevation/elevation_espg5070.rda")
+save(elevation_data_epsg4326, file = "data/elevation/elevation_espg4326.rda")
