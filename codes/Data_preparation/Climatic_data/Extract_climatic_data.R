@@ -135,6 +135,10 @@ extract_climate_data <- function(folder_path, BBS_routes_df = BBS_routes, num_co
                                                                    progress = F),
                          stdev = exactextractr::exact_extract(stack.tmp[[i]], BBS_routes_df, "stdev",
                                                                progress = F),
+                         max = exactextractr::exact_extract(stack.tmp[[i]], BBS_routes_df, "max",
+                                                            progress = F),
+                         min = exactextractr::exact_extract(stack.tmp[[i]], BBS_routes_df, "min",
+                                                            progress = F),
                          time_period = time_period)
     
     # list.tmp[[i]] <- df.tmp
@@ -142,7 +146,7 @@ extract_climate_data <- function(folder_path, BBS_routes_df = BBS_routes, num_co
     df.tmp
   }
   
-  # parallel::stopCluster(cl)  # Stop the parallel cluster
+  parallel::stopCluster(cl)  # Stop the parallel cluster
   
   # Combine the results into a single data frame
   df.tmp <- do.call(rbind, result_list)
@@ -231,8 +235,6 @@ save(pr_df, file="data/Climate/pr_df.rda")
 save(swb_df, file="data/Climate/swb_df.rda")
 save(tmax_df, file="data/Climate/tmax_df.rda")
 save(tmin_df, file="data/Climate/tmin_df.rda")
-
-
 
 # ========================== Baustelle ----
 
