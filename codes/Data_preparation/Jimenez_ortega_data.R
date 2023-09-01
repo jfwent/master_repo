@@ -3,7 +3,8 @@
 # Date : 22.08.2023
 
 # --- 
-library(readxl); library(tidyverse)
+library(readxl)
+library(tidyverse)
 
 rm(list = ls())
 # ----- 
@@ -35,4 +36,5 @@ BBS_brain <- BBS_df %>%
 
 # ---- 
 
-save(BBS_brain, file = "data/BBS_brain.rda")
+save(brain_sub, file = "data/Jimenez_Ortega_et_al/brain_sub.rda")
+save(BBS_brain, file = "data/Jimenez_Ortega_et_al/BBS_brain.rda")

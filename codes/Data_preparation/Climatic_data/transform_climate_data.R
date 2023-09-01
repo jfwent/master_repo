@@ -6,8 +6,6 @@
 
 library(tidyverse)
 
-
-
 # --- tmax ----
 
 load("data/Climate/tmax_df.rda")
@@ -373,3 +371,18 @@ swb.df <- rbind(swb.t1, swb.t2) %>%
 
 rm(swb_df)
 rm(swb.t1, swb.t2)
+
+# ---- build df ----
+
+climate_df <- cmi.annual.df %>%
+  full_join(cmi.diff, by = c("year","segment")) %>%
+  full_join(pr.diff, by = c("year","segment")) %>%
+  full_join(pr.sum.df, by = c("year","segment")) %>%
+  full_join(tmax.df, by = c("year","segment")) %>%
+  full_join(tmin.df, by = c("year","segment")) %>%
+  full_join(swb.df, by = c("year","segment")) %>%
+  relocate(year)
+
+# ---- save file ----
+
+save(climate_df, file = "data/Climate/climate_df.rda")

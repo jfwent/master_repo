@@ -1,7 +1,8 @@
 #----- Reading and preparation of Data from Bird et al., 2020 Cons Biol
 
 #------ load Bird data ----
-library(readxl); library(tidyr); library(dplyr)
+library(readxl)
+library(tidyverse)
 
 rm(list = ls())
 bird_df <- read_xlsx("other_studies/Bird_2020_Cons_Biol/cobi13486-sup-0004-tables4.xlsx")
@@ -10,7 +11,7 @@ str(bird_df)
 bird_groups_df <- read_xlsx("other_studies/Bird_2020_Cons_Biol/cobi13486-sup-0003-tables3.xlsx")
 str(bird_groups_df)
 
-#----- load our data ----
+#----- load BBS data ----
 load("data/Lica/BBS_partition_abundance.rda")
 BBS_df <- BBS_partition_abundance; rm(BBS_partition_abundance)
 

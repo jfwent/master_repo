@@ -3,7 +3,8 @@
 # Date: 22.08.2023
 
 # ------ libraries -----
-library(readxl); library(tidyverse)
+library(readxl)
+library(tidyverse)
 
 rm(list = ls())
 
@@ -46,6 +47,11 @@ AVONET_BirdTree_sub <- AVONET_BirdTree %>%
          ORDER = Order3)
 
 # ----- 
+
+save(AVONET_BirdLife_sub, file = "data/AVONET/AVONET_BirdLife.rda")
+save(AVONET_BirdTree_sub, file = "data/AVONET/AVONET_BirdTree.rda")
+save(AVONET_eBird_sub, file = "data/AVONET/AVONET_eBird.rda")
+
 BBS_avonet <- BBS_df %>% left_join(AVONET_BirdTree_sub, by = c("animal_jetz", "ORDER", "Family"))
 
-save(BBS_avonet, file= "data/BBS_AVONET.rda")
+save(BBS_avonet, file= "data/AVONET/BBS_AVONET.rda")
