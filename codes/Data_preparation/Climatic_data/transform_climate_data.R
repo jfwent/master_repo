@@ -6,6 +6,8 @@
 
 library(tidyverse)
 
+
+
 # --- tmax ----
 
 load("data/Climate/tmax_df.rda")
@@ -49,12 +51,16 @@ tmax.t2 <- tmax_celsius %>%
   mutate(year = 2019) %>%
   relocate(year)
 
-tmax.df <- rbind(tmax.t1, tmax.t2)
+tmax.df <- rbind(tmax.t1, tmax.t2) %>%
+  rename(tmax.mean = mean,
+         tmax.median = median,
+         tmax.var = var)
 
 summary(tmax.t1)
 summary(tmax.t2)
 
 rm(tmax_celsius, tmax_df)
+rm(tmax.t1, tmax.t2)
 
 # ---- tmin ----
 
@@ -101,9 +107,13 @@ tmin.t2 <- tmin_celsius %>%
 summary(tmin.t1)
 summary(tmin.t2)
 
-tmin.df <- rbind(tmin.t1, tmin.t2)
+tmin.df <- rbind(tmin.t1, tmin.t2) %>%
+  rename(tmin.mean = mean,
+         tmin.median = median,
+         tmin.var = var)
 
 rm(tmin_celsius, tmin_df)
+rm(tmin.t1, tmin.t2)
 
 # ---- transform cmi data ---- 
 
@@ -128,10 +138,14 @@ cmi_annual.t2 <- cmi_df %>%
             var = mean(var)) %>%
   mutate(year = 2019)
 
-cmi_annual.df <- rbind(cmi_annual.t1, cmi_annual.t2)
+cmi.annual.df <- rbind(cmi_annual.t1, cmi_annual.t2) %>%
+  rename(cmi.annual.mean = mean,
+         cmi.annual.median = median,
+         cmi.annual.var = var)
 
 summary(cmi_annual.t1)
 summary(cmi_annual.t2)
+rm(cmi_annual.t1, cmi_annual.t2)
 
 # ----- summer-winter cmi difference ----
 
@@ -187,17 +201,20 @@ cmi_diff.t2 <- cmi_summer.t2 %>%
             median = cmi_summer.t2$median - cmi_winter.t2$median) %>%
   mutate(year = 2019)
 
-pr_diff <- rbind(cmi_diff.t1, cmi_diff.t2)
+cmi.diff <- rbind(cmi_diff.t1, cmi_diff.t2) %>%
+  rename(cmi.diff.mean = mean,
+         cmi.diff.median = median)
 
 summary(cmi_diff.t1)
 summary(cmi_diff.t2)
 
 rm(cmi_df)
+rm(cmi_diff.t1, cmi_diff.t2)
+rm(cmi_summer.t1, cmi_summer.t2, cmi_winter.t2, cmi_winter.t1)
 
 # --- pr ---- 
 
 load("data/Climate/pr_df.rda")
-
 
 # ---- annual precipitation sum ----
 pr_sum.t1 <- pr_df %>%
@@ -228,10 +245,14 @@ pr_sum.t2 <- pr_df %>%
             var = mean(var)) %>%
   mutate(year = 2019)
 
-pr_sum.df <- rbind(pr_sum.t1, pr_sum.t2)
+pr.sum.df <- rbind(pr_sum.t1, pr_sum.t2) %>%
+  rename(pr.sum.mean = sum_mean,
+         pr.sum.median = sum_median,
+         pr.sum.var = var)
 
 summary(pr_sum.t1)
 summary(pr_sum.t2)
+rm(pr_sum.t1, pr_sum.t2)
 
 # ----- summer-winter precipitation difference ----
 
@@ -307,12 +328,16 @@ pr_diff.t2 <- pr_summer.t2 %>%
             median = pr_summer.t2$sum_median-pr_winter.t2$sum_median) %>%
   mutate(year = 2019)
 
-pr_diff <- rbind(pr_diff.t1, pr_diff.t2)
+pr.diff <- rbind(pr_diff.t1, pr_diff.t2) %>%
+  rename(pr.diff.mean = mean,
+         pr.diff.median = median)
 
 summary(pr_diff.t1)
 summary(pr_diff.t2)
 
 rm(pr_df)
+rm(pr_diff.t1, pr_diff.t2)
+rm(pr_summer.t1, pr_summer.t2, pr_winter.t1, pr_winter.t2)
 
 # ---- swb ----
 
@@ -341,6 +366,10 @@ swb.t2 <- swb_df %>%
 summary(swb.t1)
 summary(swb.t2)
 
-swb.df <- rbind(swb.t1, swb.t2)
+swb.df <- rbind(swb.t1, swb.t2) %>%
+  rename(swb.mean = mean,
+         swb.median = median,
+         swb.var = var)
 
 rm(swb_df)
+rm(swb.t1, swb.t2)
