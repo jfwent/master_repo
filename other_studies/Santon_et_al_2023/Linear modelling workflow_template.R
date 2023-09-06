@@ -11,7 +11,7 @@
 rm(list = ls()) # OPTIONAL: Execute to remove previous objects from the global environment.
 
 # Activate the support 'functions file' for this routine:
-source("Linear modelling workflow_support functions.R") 
+source("other_studies/Santon_et_al_2023/Linear modelling workflow_support functions.R")
   # NOTE-1: The 'functions file' must be located in your current working directory.
   # NOTE-2: At first use, all missing packages required for this routine are automatically installed.
   # NOTE-3: "Step plot settings" in the functions file specifies the ggplot2 theme for the entire routine. 
@@ -25,9 +25,10 @@ source("Linear modelling workflow_support functions.R")
 # Consult the article for more detailed explanations of each section. 
 
 # Import data frame (example only. Any other import function of R can be used).
-df <- read.table(file = "myfile.csv",      # Replace "myfile.csv" with your data file name.
-                 header = T,               # Specify whether first row contains variable names.
-                 sep = ",")                # Specify the field separator character in the data.
+df <- BBS_climate_means
+# df <- read.table(file = "myfile.csv",      # Replace "myfile.csv" with your data file name.
+#                  header = T,               # Specify whether first row contains variable names.
+#                  sep = ",")                # Specify the field separator character in the data.
 
 # Carefully check data structure, column names and vector classes. Change them as needed.
 str(df)
@@ -41,7 +42,7 @@ str(df)
 #================================#
 # * 3.1 ONE RESPONSE variable ----
 #================================#
-var_resp <- "response"                     # Replace with the name of the response variable.
+var_resp <- "abund.mean"                     # Replace with the name of the response variable.
 
 
 #=============================================================================#

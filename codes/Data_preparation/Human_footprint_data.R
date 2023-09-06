@@ -159,4 +159,28 @@ hfp_df <- hfp_df %>%
     hfp.variance = round(hfp.variance, 3)
   )
 
+hfp.t1 <- hfp_df %>%
+  filter(year %in% 2000:2002) %>%
+  group_by(segment) %>%
+  summarize(hfp.mean = round(mean(hfp.mean),3),
+         hfp.median = round(median(hfp.median),3),
+         hfp.var = round(var(hfp.variance),3)) %>%
+  mutate(year = 2001) %>%
+  relocate(year)
+
+hfp.t2 <- hfp_df %>%
+  filter(year %in% 2018:2020) %>%
+  group_by(segment) %>%
+  summarize(hfp.mean = round(mean(hfp.mean),3),
+            hfp.median = round(median(hfp.median),3),
+            hfp.var = round(var(hfp.variance),3)) %>%
+  mutate(year = 2019) %>%
+  relocate(year)
+
+hfp.full <- rbind(hfp.t1, hfp.t2)
+
+# summary(hfp.t1)
+# summary(hfp.t2)
+
 save(hfp_df, file = "data/human_footprint_df.rda")
+save(hfp.full, file = "data/hfp_t1_t2.rda")

@@ -8,12 +8,53 @@ library(lubridate)
 
 # ---- load data set ----
 
-rm(list=ls())
+eco_txt <- read.table("data/Lica/US_ecoregions.txt", header = T, sep = "") %>%
+  select(-FID, -Kilometers) %>%
+  rename(segment = partition)
 
 land_use_pxsum <- read.delim("/Users/jonwent/Desktop/ETHZ/master_thesis/BBS.land_all.routes.pxsum.txt",
                              header = T, sep = "") %>%
-  rename(segment = partition)
+  rename(segment = partition) %>%
+  left_join(eco_txt, by = "segment") %>%
+  na.omit() %>%
+  rename(ecoregion = Ecoregion) %>%
+  rowwise() %>%
+  mutate(px.sum = sum(urban.low,
+                      urban.high,
+                      forest,
+                      grass,
+                      pasture,
+                      crop,
+                      wet,
+                      barren)) %>%
+  filter(year %in% 2001 | year %in% 2019)
 
+land_use_area <- land_use_pxsum %>%
+  mutate(
+    across(
+      .cols = c(4:11),
+      .fns = list(
+        area = \(x) x*(30*30)
+      ),
+      .names = '{col}.area.m2'
+    )
+  ) %>%
+  select(-c(4:11, px.sum)) %>%
+  rowwise() %>%
+  mutate(tot.area.m2 = sum(urban.low.area.m2,
+                           urban.high.area.m2,
+                           forest.area.m2,
+                           grass.area.m2,
+                           pasture.area.m2,
+                           crop.area.m2,
+                           wet.area.m2,
+                           barren.area.m2)) %>%
+  filter(year %in% 2001 | year %in% 2019)
+
+save(land_use_area, file = "data/land_use_area_t1_t2.rda")
+save(land_use_pxsum, file = "data/land_use_pxsum_t1_t2.rda")
+
+# ====================== old stuff ----
 # load the land use data set that I characterised the segments into habitat clusters to compare
 load("data/land_use_clustered_complete_df.rda")
 

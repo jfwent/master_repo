@@ -481,7 +481,6 @@ xval.glm.eagle.step <- cv.model(glm.eagle.step, K = 5)
 
 head(xval.glm.eagle.step)
 
-
 plot(glm.eagle.step$fitted.values, xval.glm.eagle.step$cvpred,
      xlab = 'fitted values from stepwise optimize model',
      ylab = 'predicted values from cross-validation',
@@ -499,7 +498,6 @@ xval.glm.eagle.step.test <- data.frame(ID = 1:nrow(eagle.model.matrix),
 #calculate optimal threshold
 (thres.glm.eagle.step <- optimal.thresholds(glm.eagle.step.test, threshold = 1001, opt.methods = 1:9))
 (thres.glm.eagle.xval <- optimal.thresholds(xval.glm.eagle.step.test, threshold = 1001, opt.methods = 1:9))
-
 
 
 #assess model performance using kappa
