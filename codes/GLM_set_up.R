@@ -71,7 +71,8 @@ fit_glms <- function(df, birds.func, vars){
   
   model_results <- list()
   
-  form.glm <- as.formula(paste0("abund.mean ~", vars, "+ I(", vars, "^2)"))
+  # form.glm <- as.formula(paste0("abund.mean ~", vars, "+ I(", vars, "^2)"))
+  form.glm <- as.formula(paste0("abund.mean ~", paste(vars, collapse = " + "), " + I(", paste(vars, "^2", collapse = " + "), ")"))
   
   for(bird in birds.func){
     
@@ -88,7 +89,30 @@ fit_glms <- function(df, birds.func, vars){
 
 # ---- fit glms ----
 
+var_all <- colnames(BBS.t1[5:17])
+
 glm_all_full <- fit_glms(BBS.t1, birds.func = sort(unique(BBS.t1$animal_jetz)), vars = colnames(BBS.t1[5:17]))
+
+aics_models <- rep(NA, length(unique(BBS.t1$animal_jetz)))
+
+i <- 1
+
+for(bird in sort(unique(BBS.t1$animal_jetz))){
+  
+  glm_tmp <- glm_all_full[[bird]]
+  
+  aic.tmp <- glm_tmp$aic
+  if(!is.infinite(aic.tmp)){
+    aics_models[i] <- aic.tmp
+  }else{
+    aics_models[i] <- NA
+  }
+  i <- i+1
+}
+
+model_eval <- tibble(birds = unique(BBS.t1$animal_jetz),
+                     aic = aics_models,
+                     auc = NA)
 
 #cross validation
 # for(i in seq_along(n_reps)){
@@ -133,7 +157,7 @@ for(bird in sort(unique(BBS.t1$animal_jetz))){
   
   model.tmp <- glm_all_full[[bird]]
   
-  cv.model.tmp <- cv.model(model.tmp, 5)
+  cv.model.tmp <- cv.model(model.tmp, 3)
   
   cv.models[[bird]] <- cv.model.tmp
   
@@ -149,28 +173,28 @@ for(bird in sort(unique(BBS.t1$animal_jetz))){
     plot(model.tmp$fitted.values, pred.tmp$cvpred, 
          xlab = "fitted values from glm model", 
          ylab = "predicted values from cross-validation",
-         main="Cross validation GAM")
+         main="Cross validation GLM")
     abline(0, 1, lwd = 3, col = "red")
   }
 }
 
 rm(form.glm, form.tmp, all_vars, bird, cv.model.tmp, model.tmp, pred.tmp)
 
-# ---- calculate ROC and AUC ----
+# ---- calculate AUC ----
+
+# ##ROC-plots and AUC
+# str(AUC::roc(glm.eagle.step.test$predicted, as.factor(glm.eagle.step.test$observed)))
+# 
+# #storing raw data for plotting ROC-curves and calculating AUC
+# roc.glm.eagle.step <- roc(glm.eagle.step.test$predicted, as.factor(glm.eagle.step.test$observed))
+# roc.glm.eagle.xval <- roc(xval.glm.eagle.step.test$predicted, as.factor(xval.glm.eagle.step.test$observed))
+# 
+# 
+# #plotting the ROC curves
+# plot(roc.glm.eagle.step, col = "grey20", lwd = 5, lty = 1, main='Eagle')
+# plot(roc.glm.eagle.xval, col = "grey70", lwd = 3, lty = 2, add = TRUE)
 
 
-
-##ROC-plots and AUC
-str(AUC::roc(glm.eagle.step.test$predicted, as.factor(glm.eagle.step.test$observed)))
-
-#storing raw data for plotting ROC-curves and calculating AUC
-roc.glm.eagle.step <- roc(glm.eagle.step.test$predicted, as.factor(glm.eagle.step.test$observed))
-roc.glm.eagle.xval <- roc(xval.glm.eagle.step.test$predicted, as.factor(xval.glm.eagle.step.test$observed))
-
-
-#plotting the ROC curves
-plot(roc.glm.eagle.step, col = "grey20", lwd = 5, lty = 1, main='Eagle')
-plot(roc.glm.eagle.xval, col = "grey70", lwd = 3, lty = 2, add = TRUE)
 
 
 #comparing AUC values
