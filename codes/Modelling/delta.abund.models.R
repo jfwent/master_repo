@@ -22,19 +22,33 @@ hist(d.abund.min40$delta.abund, breaks = 100)
 library(ggplot2)
 library(ggridges)
 
-d.abund.min40 %>%
-  # group_by(animal_jetz) %>%
-  # mutate(
-  #   n_obs = n(),
-  #   n_nulls = sum(between(delta.abund, -1, 1)),
-  #   null_pct = (n_nulls/n_obs)*100
-  # ) %>%
-  # arrange(null_pct) %>%
-  ggplot(aes(y = animal_jetz, x = delta.abund)) +
-  # geom_boxplot()
-  geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+density_peaks <- d.abund.min40 %>%
+  group_by(animal_jetz) %>%
+  summarise(peak_height = max(stat(delta.abund)))
+
+d.abund.ridges <-
+  d.abund.min40 %>%
+  group_by(animal_jetz) %>%
+  mutate(
+    n_obs = n(),
+    n_nulls = sum(between(delta.abund, -1, 1)),
+    null_pct = (n_nulls/n_obs)*100
+  ) %>%
+  # filter(animal_jetz != "Petrochelidon_pyrrhonota" | animal_jetz != "Xanthocephalus_xanthocephalus") %>%
+  ggplot(aes(y = reorder(animal_jetz, -null_pct),
+             x = delta.abund,
+             # fill = delta.abund,
+             # group = factor(delta.abund)
+             )) +
+  geom_density_ridges_gradient(
+    scale = 3, rel_min_height = 0.01) +
   theme(axis.text=element_text(size=5)) +
-  scale_x_continuous(expand = expansion(mult = 0.01))
+  scale_x_continuous(expand = expansion(mult = 0.1)) +
+  xlim(-50, 50) +
+  ylab("Bird species") +
+  xlab("Delta abundance")
+
+ggplot2::ggsave(filename = "figures/D.abund.ridges.png", plot = d.abund.ridges, width = 8, height = 6, dpi = 300)
 
 d.abund.min40 %>% 
   group_by(animal_jetz) %>%
