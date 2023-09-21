@@ -38,7 +38,7 @@ bbs.routes.segmented.final <- bbs.routes.segmented.final %>%
 
 # length(bbs.routes.segmented.final$partition) # 2880 segments
 
-# mapview::mapview(bbs.routes.segmented.final)
+mapview::mapview(bbs.routes.segmented.final)
 
 
 # # see common segments ----

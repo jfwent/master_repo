@@ -107,9 +107,7 @@ land_use_importance_list_t2 <- list()
 importance_ratio_list_t1 <- list()
 importance_ratio_list_t2 <- list()
 
-# tttt <- varimp(mod.t2001.Agelaius_phoeniceus_)
-# tttt2 <- varimp(mod.t2001.Agelaius_phoeniceus_, conditional = T)
-# ttt <- varimpAUC(mod.t2001.Agelaius_phoeniceus_)
+tibble_data_combined <- list()
 
 for(year.ind in years){
   
@@ -185,8 +183,20 @@ for(year.ind in years){
     }
     
     # browse()
+    
+    tibble_entry <- list(
+      Year = year.ind,
+      Bird = bird,
+      Land_Use_Importance = land_use_importance,
+      Climate_Importance = climate_importance,
+      Importance_Ratio = importance_ratio
+    )
+    
+    tibble_data_combined[[length(tibble_data_combined) + 1]] <- tibble_entry
   }
 }
+
+final_tibble <- bind_rows(tibble_data_combined)
 
 # ratio of the relative importance of climate:land use variables and the change from 2001 - 2019
 
@@ -229,7 +239,7 @@ segment_helper <- imp_ratio %>%
     bird = fct_reorder(bird, desc(change) * if_else(change < 0, -1, 1))
   )
 
-imp_ratio %>%
+paired_barplot <- imp_ratio %>%
   # filter(bird %in% sample(unique(bird), size = 25)) %>%
   mutate(year = factor(year)) %>%
   mutate(bird = fct_reorder(bird, imp.ratio, max)) %>%
@@ -249,10 +259,12 @@ imp_ratio %>%
   theme(axis.text=element_text(size=5)) +
   scale_x_continuous(expand = expansion(mult = 0.1))
 
-
+ggsave(filename = "figures/paired_var_imp_ratio_RF.png", plot = paired_barplot, width = 8, height = 6, dpi = 300)
   
   
 # --- RF model approach similar to Howard et al., 2023 ----
+# The authors build SDMs 
+
 
 # ---- library ----
 library(progress)

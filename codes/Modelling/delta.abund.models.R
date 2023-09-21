@@ -13,7 +13,37 @@ load("data/d.abund.min40.rda")
 
 # ---- LM function -----
 
+birds <- unique(d.abund.min40$animal_jetz)
 
+LM_list <- list()
+
+model.eval.tib <- tibble(Bird = character(0), adj.R2 = numeric(0),
+                         # p.value = numeric(0)
+                         )
+
+var.climate <- 0
+var.land_use <- 0
+res_var <- 0
+
+for(bird in birds){
+  
+  data.now <- d.abund.min40 %>% filter(animal_jetz %in% bird)
+  
+  model.now <- lm(delta.abund ~., data = data.now[4:17])
+  
+  LM_list[[bird]] <- model.now
+  
+  adj_r2 <- summary(model.now)$adj.r.squared
+  # p.value <- summary(model.now)$coefficients[, "Pr(>|t|)"]
+  
+  model.eval.tib <- model.eval.tib %>%
+    add_row(Bird = bird, adj.R2 = adj_r2,
+            # p.value = p.value
+            )
+  
+}
+
+summary(LM_list[[1]])
 
 
 # ========== Old ----

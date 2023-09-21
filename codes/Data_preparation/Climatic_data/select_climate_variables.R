@@ -71,7 +71,7 @@ land.use.df <- hfp.df %>%
 # hist(land.use.df$`wet.area.m2-----log`) # still left skewed
 # hist(land.use.df$`barren.area.m2-----log`) # still left skewed
 
-# ecospat::ecospat.cor.plot(land.use.df[3:11])
+ecospat::ecospat.cor.plot(land.use.df[,3:11])
 # no correlations
 
 # bioclim.df <- climate.df %>%
