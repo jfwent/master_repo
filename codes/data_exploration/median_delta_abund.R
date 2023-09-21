@@ -8,7 +8,6 @@ library(tidyverse)
 library(ggplot2)
 library(patchwork)
 
-
 # ---- abundance data  -----
 load("data/d.abund.min6.rda")
 load("data/d.abund.min10.rda")
@@ -123,88 +122,118 @@ full.min40 <- median.d.abund.min40 %>%
 p1 <- ggplot(full.min40, aes(y = median.d.abund, x = log(GenLength))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth() +
+  # geom_abline() +
   ylab("Median delta Abund") +
-  xlab("log(Generation length)")
+  xlab("log(Generation length)")  +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  ylim(-5,3)
 
 p2 <- ggplot(full.min40, aes(y = median.d.abund, x = diet.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth() +
+  # geom_abline() +
   xlab("Diet breadth") +
-  ylab("")
+  ylab("")  +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  ylim(-5,3)
 
 p3 <- ggplot(full.min40, aes(y = median.d.abund, x = rel_brain_size)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth() +
   xlab("Relative brain size") +
-  ylab("")
+  ylab("") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  ylim(-5,3)
 
 p4 <- ggplot(full.min40, aes(y = median.d.abund, x = hand.wing.ind)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth() +
+  # geom_abline() +
   xlab("Hand-wing index") +
-  ylab("Median delta Abund")
+  ylab("Median delta Abund")  +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  ylim(-5,3)
 
 p5 <- ggplot(full.min40, aes(y = median.d.abund, x = log(body.mass))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth()+
+  # geom_abline() +
   xlab("log(Body mass)") +
-  ylab("")
+  ylab("") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  ylim(-5,3)
 
 p6 <- ggplot(full.min40, aes(y = median.d.abund, x = hab.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth()+
+  # geom_abline() +
   xlab("Habitat breadth") +
-  ylab("")
+  ylab("") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  ylim(-5,3)
 
 final_plot <- p1 + p2 + p3 + p4 + p5 + p6
 
-# final_plot
+final_plot
 
-# ggsave(filename = "figures/species_traits_median_abund_min40.png", plot = final_plot, width = 8, height = 6, dpi = 300)
+ggsave(filename = "figures/species_traits_median_abund_min40.png", plot = final_plot, width = 8, height = 6, dpi = 300)
 
 # ----- boxplots -----
 
 p1 <- ggplot(full.min40, aes(y = median.d.abund, x = log(tot.innov), group = tot.innov)) +
   geom_boxplot() +
   ylab("Median delta abundance") +
-  xlab("log(Innovativeness)")
+  xlab("log(Innovativeness)")  +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  ylim(-5,3)
 
 p2 <- ggplot(full.min40, aes(y = median.d.abund, x = Trophic.Niche, group = Trophic.Niche)) +
   geom_boxplot()  +
   xlab("Trophic Niche") +
   ylab("") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 0.8))
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.8)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  ylim(-5,3)
 
 p3 <- ggplot(full.min40, aes(y = median.d.abund, x = Trophic.Level, group = Trophic.Level)) +
   geom_boxplot() +
   xlab("Trophic Level") +
   ylab("") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 0.8))
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.8)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  ylim(-5,3)
   
 
 boxplot <- p1 + p2 + p3
 
-# boxplot
+boxplot
 
 ggsave(filename = "figures/boxplot_species_traits_min40.png", plot = boxplot, width = 8, height = 6, dpi = 300)
 
 # ---- validation plots ---- 
 
-p1 <- ggplot(full.min40, aes(y = median.d.abund, x = PT.c, group = PT.c)) +
+p1 <- ggplot(full.min40, aes(y = median.d.abund, x = ACAD.ind, group = ACAD.ind)) +
   geom_boxplot() +
   xlab("ACAD pop. trend") +
-  ylab("Median delta Abund")
+  ylab("Median delta Abund") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  ylim(-5,3)
 
 p2 <- ggplot(full.min40, aes(y = median.d.abund, x = sauer.trend)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth()  +
+  # geom_abline() +
   xlab("Sauer's pop. trend") +
-  ylab("")
+  ylab("") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  ylim(-5,3)
 
-p3 <- ggplot(full.min40, aes(x = PT.c, y = sauer.trend, group = PT.c)) +
+p3 <- ggplot(full.min40, aes(x = ACAD.ind, y = sauer.trend, group = ACAD.ind)) +
   geom_boxplot() +
   ylab("Sauer's pop. trend") +
-  xlab("ACAD pop. trend")
+  xlab("ACAD pop. trend") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  ylim(-5,3)
 
 validation_plot <- p1 + p2 + p3
 

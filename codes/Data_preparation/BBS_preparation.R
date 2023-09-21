@@ -244,7 +244,7 @@ rm(my.birds)
 
 # ---- filter for complete cases ----
 
-# ---- prepare the bioclim data ---
+# ---- prepare the bioclim data ----
 
 climate.df <- climate_df %>%
   # filter(year == 2001) %>%
@@ -279,7 +279,7 @@ dbioclim <- bioclim.df %>%
     across(
       .cols = matches('mean') | matches('log'),
       # .fns = \(.) lag(.)-.,
-      .fns = ~ ifelse(!is.na(lag(.)), lag(.) - ., NA),
+      .fns = ~ ifelse(!is.na(lag(.)), . - lag(.), NA),
       .names = "delta.{col}"
     )
   ) %>%
@@ -355,7 +355,7 @@ d.abund.min6 <- BBS.stable.full.min6 %>%
   arrange(animal_jetz, segment) %>%
   group_by(animal_jetz, segment) %>%
   select(year, segment, animal_jetz, abund.geom.mean) %>%
-  mutate(delta.abund = lag(abund.geom.mean) - abund.geom.mean) %>%
+  mutate(delta.abund =  abund.geom.mean - lag(abund.geom.mean)) %>%
   filter(all(abund.geom.mean !=0),
          !is.na(delta.abund)) %>%
   select(-abund.geom.mean) %>%
@@ -377,7 +377,7 @@ d.abund.min10 <- BBS.stable.full.min10 %>%
   arrange(animal_jetz, segment) %>%
   group_by(animal_jetz, segment) %>%
   select(year, segment, animal_jetz, abund.geom.mean) %>%
-  mutate(delta.abund = lag(abund.geom.mean) - abund.geom.mean) %>%
+  mutate(delta.abund = abund.geom.mean - lag(abund.geom.mean)) %>%
   filter(all(abund.geom.mean !=0),
          !is.na(delta.abund)) %>%
   select(-abund.geom.mean) %>%
@@ -391,7 +391,7 @@ d.abund.min40 <- BBS.stable.full.min40 %>%
   arrange(animal_jetz, segment) %>%
   group_by(animal_jetz, segment) %>%
   select(year, segment, animal_jetz, abund.geom.mean) %>%
-  mutate(delta.abund = lag(abund.geom.mean) - abund.geom.mean) %>%
+  mutate(delta.abund = abund.geom.mean - lag(abund.geom.mean)) %>%
   filter(all(abund.geom.mean !=0),
          !is.na(delta.abund)) %>%
   select(-abund.geom.mean) %>%
