@@ -89,9 +89,6 @@ rm(climate_df, climate.df, clim.t1, dclim)
 
 # ---- land use data ----
 
-
-
-
 lc.df <- land_use_area %>%
   select(-c(ecoregion, tot.area.m2, route, barren.area.m2)) %>%
   mutate(urban.area.m2 = urban.high.area.m2 + urban.low.area.m2,
@@ -99,6 +96,21 @@ lc.df <- land_use_area %>%
   select(-c(urban.high.area.m2, urban.low.area.m2, grass.area.m2, pasture.area.m2)) %>%
   mutate(across(
     .cols = contains("area"),
+    .fns = c(
+      log = \(x) log(x + 900))
+    ,
+    .names = "{.col}.{.fn}"
+  )) %>%
+  select(year, segment, contains("log"))
+
+lc.df <- land_use_area %>%
+  select(-c(ecoregion, tot.area.m2, route, barren.area.m2, wet.area.m2)) %>%
+  mutate(PC1 = urban.high.area.m2 + urban.low.area.m2 + grass.area.m2 + pasture.area.m2,
+         PC2 = forest.area.m2 + crop.area.m2) %>%
+  select(-c(urban.high.area.m2, urban.low.area.m2,
+            grass.area.m2, pasture.area.m2, forest.area.m2, crop.area.m2)) %>%
+  mutate(across(
+    .cols = contains("area") | contains("PC"),
     .fns = c(
       log = \(x) log(x + 900))
     ,
@@ -219,7 +231,8 @@ rm(bird_model, variable.ind, climate_vars, birds,
 # ---- LM models land use variables ----
 
 birds <- sort(unique(d.abund.lc$animal_jetz))
-land_use_vars <- colnames(d.abund.lc[4:13])
+# land_use_vars <- colnames(d.abund.lc[4:13])
+land_use_vars <- colnames(d.abund.lc[4:7])
 
 num_folds <- 10
 
@@ -334,6 +347,7 @@ bp_lc_outliers <- lc_rmse %>%
     size = 1.5
   )
 
+bp_lc_outliers
 
 ggplot2::ggsave(filename = "figures/LCVar_bp_RMSE_dAbund.png", plot = bp_lc_outliers, width = 8, height = 6, dpi = 300)
 
@@ -360,6 +374,8 @@ bp_lc_no_outliers <- lc_rmse %>%
     color = "black",
     size = 1.5
   ) +
-  coord_cartesian(xlim = c(0, 110))
+  coord_cartesian(xlim = c(0, 60))
+
+bp_lc_no_outliers
 
 ggplot2::ggsave(filename = "figures/LCVar_bp_RMSE_dAbund_noOutliers.png", plot = bp_lc_no_outliers, width = 8, height = 6, dpi = 300)
