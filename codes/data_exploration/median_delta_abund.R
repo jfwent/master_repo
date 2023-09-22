@@ -126,7 +126,7 @@ p1 <- ggplot(full.min40, aes(y = median.d.abund, x = log(GenLength))) +
   ylab("Median delta Abund") +
   xlab("log(Generation length)")  +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-5,3)
+  ylim(-3,5)
 
 p2 <- ggplot(full.min40, aes(y = median.d.abund, x = diet.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -135,7 +135,7 @@ p2 <- ggplot(full.min40, aes(y = median.d.abund, x = diet.breadth)) +
   xlab("Diet breadth") +
   ylab("")  +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-5,3)
+  ylim(-3,5)
 
 p3 <- ggplot(full.min40, aes(y = median.d.abund, x = rel_brain_size)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -143,7 +143,7 @@ p3 <- ggplot(full.min40, aes(y = median.d.abund, x = rel_brain_size)) +
   xlab("Relative brain size") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-5,3)
+  ylim(-3,5)
 
 p4 <- ggplot(full.min40, aes(y = median.d.abund, x = hand.wing.ind)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -152,7 +152,7 @@ p4 <- ggplot(full.min40, aes(y = median.d.abund, x = hand.wing.ind)) +
   xlab("Hand-wing index") +
   ylab("Median delta Abund")  +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-5,3)
+  ylim(-3,5)
 
 p5 <- ggplot(full.min40, aes(y = median.d.abund, x = log(body.mass))) +
   geom_point(size = 2, alpha = 0.5) +
@@ -161,7 +161,7 @@ p5 <- ggplot(full.min40, aes(y = median.d.abund, x = log(body.mass))) +
   xlab("log(Body mass)") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-5,3)
+  ylim(-3,5)
 
 p6 <- ggplot(full.min40, aes(y = median.d.abund, x = hab.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -170,7 +170,7 @@ p6 <- ggplot(full.min40, aes(y = median.d.abund, x = hab.breadth)) +
   xlab("Habitat breadth") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-5,3)
+  ylim(-3,5)
 
 final_plot <- p1 + p2 + p3 + p4 + p5 + p6
 
@@ -185,7 +185,7 @@ p1 <- ggplot(full.min40, aes(y = median.d.abund, x = log(tot.innov), group = tot
   ylab("Median delta abundance") +
   xlab("log(Innovativeness)")  +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-5,3)
+  ylim(-3,5)
 
 p2 <- ggplot(full.min40, aes(y = median.d.abund, x = Trophic.Niche, group = Trophic.Niche)) +
   geom_boxplot()  +
@@ -193,7 +193,7 @@ p2 <- ggplot(full.min40, aes(y = median.d.abund, x = Trophic.Niche, group = Trop
   ylab("") +
   theme(axis.text.x = element_text(angle = 45, hjust = 0.8)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-5,3)
+  ylim(-3,5)
 
 p3 <- ggplot(full.min40, aes(y = median.d.abund, x = Trophic.Level, group = Trophic.Level)) +
   geom_boxplot() +
@@ -201,7 +201,7 @@ p3 <- ggplot(full.min40, aes(y = median.d.abund, x = Trophic.Level, group = Trop
   ylab("") +
   theme(axis.text.x = element_text(angle = 45, hjust = 0.8)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-5,3)
+  ylim(-3,5)
   
 
 boxplot <- p1 + p2 + p3
@@ -217,7 +217,7 @@ p1 <- ggplot(full.min40, aes(y = median.d.abund, x = ACAD.ind, group = ACAD.ind)
   xlab("ACAD pop. trend") +
   ylab("Median delta Abund") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-5,3)
+  ylim(-3,5)
 
 p2 <- ggplot(full.min40, aes(y = median.d.abund, x = sauer.trend)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -226,14 +226,14 @@ p2 <- ggplot(full.min40, aes(y = median.d.abund, x = sauer.trend)) +
   xlab("Sauer's pop. trend") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-5,3)
+  ylim(-3,5)
 
 p3 <- ggplot(full.min40, aes(x = ACAD.ind, y = sauer.trend, group = ACAD.ind)) +
   geom_boxplot() +
   ylab("Sauer's pop. trend") +
   xlab("ACAD pop. trend") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-5,3)
+  ylim(-3,5)
 
 validation_plot <- p1 + p2 + p3
 
