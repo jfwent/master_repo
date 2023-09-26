@@ -13,7 +13,7 @@ library(varImp)
 # ---- load data ----
 
 load("data/Climate/climate_df.rda")
-load("data/hfp_t1_t2.rda")
+# load("data/hfp_t1_t2.rda")
 load("data/Land_use/land_use_area_t1_t2.rda")
 
 # load("data/BBS.full.stable.min6.rda")
@@ -25,17 +25,18 @@ load("data/BBS.full.stable.min40.rda")
 climate.df <- climate_df %>%
   select(-c(contains("var"), contains("median")),
          contains("mean"),
-         -c(pr.sum.mean, cmi.annual.mean, cmi.diff.mean)); rm(climate_df)
+         -c(pr.sum.mean, cmi.annual.mean, pr.diff.mean)); rm(climate_df)
 
-hfp.df <- hfp.full %>%
-  # filter(year == 2001) %>%
-  select(-c(contains("var"), contains("median")), contains("mean")) %>%
-  mutate(hfp.mean = ifelse(is.nan(hfp.mean) == T, NA, hfp.mean)); rm(hfp.full)
+# hfp.df <- hfp.full %>%
+#   # filter(year == 2001) %>%
+#   select(-c(contains("var"), contains("median")), contains("mean")) %>%
+#   mutate(hfp.mean = ifelse(is.nan(hfp.mean) == T, NA, hfp.mean)); rm(hfp.full)
 
-land.use.df <- hfp.df %>%
-  # filter(year == 2001) %>%
-  left_join(land_use_area, by = c("segment", "year")) %>%
-  select(-c(ecoregion, tot.area.m2, route)) %>%
+land.use.df <- land_use_area %>%
+  select(-c(ecoregion, tot.area.m2, route, barren.area.m2)) %>%
+  mutate(urban.area.m2 = urban.high.area.m2 + urban.low.area.m2,
+         all.grass.area.m2 = grass.area.m2 + pasture.area.m2) %>%
+  select(-c(urban.high.area.m2, urban.low.area.m2, grass.area.m2, pasture.area.m2, wet.area.m2)) %>%
   mutate(across(
     .cols = contains("area"),
     .fns = c(
@@ -43,15 +44,20 @@ land.use.df <- hfp.df %>%
     ,
     .names = "{.col}.{.fn}"
   )) %>%
-  select(year, segment, contains("log"), contains("hfp")); rm(land_use_area, hfp.df)
+  select(year, segment, contains("log"))
 
 bioclim.df <- climate.df %>%
-  left_join(land.use.df, by = c("year", "segment")); rm(climate.df, land.use.df)
+  left_join(land.use.df, by = c("year", "segment")) %>%
+  na.omit()
 
-# --- build the abundance data sets with climate and land use ----
+rm(land_use_area)
+rm(climate.df, land.use.df)
+
+# ---- build the abundance data sets with climate and land use ----
 
 BBS_bioclim <- BBS.stable.full.min40 %>%
   # filter(year == 2001) %>%
+  select(year, segment, animal_jetz, abund.geom.mean) %>%
   left_join(bioclim.df, by = c("year", "segment")) %>%
   # select(-c(abund.median, abund.var, abund.mean)) %>%
   arrange(animal_jetz) %>%
@@ -71,6 +77,7 @@ BBS_bioclim_t1 <- BBS.stable.full.min40 %>%
   filter(year == 2001) %>%
   left_join(bioclim.df, by = c("year", "segment")) %>%
   # select(-c(abund.median, abund.var, abund.mean)) %>%
+  # select(-c(abund.median, abund.var, abund.mean)) %>%
   arrange(animal_jetz) %>%
   mutate(abund.geom.mean = as.integer(abund.geom.mean)) %>%
   na.omit()
@@ -83,7 +90,7 @@ BBS_bioclim_t2 <- BBS.stable.full.min40 %>%
   mutate(abund.geom.mean = as.integer(abund.geom.mean)) %>%
   na.omit(); rm(bioclim.df, BBS.stable.full.min40)
 
-#---- RF model fitting T1 ----
+# ---- RF model fitting T1 ----
 
 set.seed(123)
 
@@ -91,21 +98,21 @@ birds <- unique(BBS_bioclim$animal_jetz)
 years <- unique(BBS_bioclim$year)
 
 climate_vars <- colnames(BBS_bioclim[5:8])
-lc_vars <- colnames(BBS_bioclim[9:17])
+lc_vars <- colnames(BBS_bioclim[9:12])
 
 rf_mods_t1 <- list()
 rf_mods_t2 <- list()
 
-rel_var_importance_t1 <- list()
-rel_var_importance_t2 <- list()
-
-climate_importance_list_t1 <- list()
-land_use_importance_list_t1 <- list()
-climate_importance_list_t2 <- list()
-land_use_importance_list_t2 <- list()
-
-importance_ratio_list_t1 <- list()
-importance_ratio_list_t2 <- list()
+# rel_var_importance_t1 <- list()
+# rel_var_importance_t2 <- list()
+# 
+# climate_importance_list_t1 <- list()
+# land_use_importance_list_t1 <- list()
+# climate_importance_list_t2 <- list()
+# land_use_importance_list_t2 <- list()
+# 
+# importance_ratio_list_t1 <- list()
+# importance_ratio_list_t2 <- list()
 
 tibble_data_combined <- list()
 
@@ -133,7 +140,7 @@ for(year.ind in years){
     #                                 importance = TRUE))
     
     assign(model_name, cforest(abund.geom.mean ~ .,
-                          data = df.tmp[4:17],
+                          data = df.tmp[4:12],
                           controls = cforest_unbiased(mtry = sqrt(ncol(df.tmp) - 1),
                                                       ntree = 1000)))
     
@@ -153,34 +160,34 @@ for(year.ind in years){
     var_imp_adj <- var_importance/sum(var_importance)
     
     # Store the relative variable importance for the current year and bird
-    if (year.ind == 2001) {
-      rel_var_importance_t1[[bird]] <- var_imp_adj
-    } else if (year.ind == 2019) {
-      rel_var_importance_t2[[bird]] <- var_imp_adj
-    }
+    # if (year.ind == 2001) {
+    #   rel_var_importance_t1[[bird]] <- var_imp_adj
+    # } else if (year.ind == 2019) {
+    #   rel_var_importance_t2[[bird]] <- var_imp_adj
+    # }
     
     # Separate variable importance scores into climate and land use categories
     climate_importance <- sum(var_imp_adj[1:4])
-    land_use_importance <- sum(var_imp_adj[5:13])
+    land_use_importance <- sum(var_imp_adj[5:8])
     
-    # Store the importance scores for climate and land use variables
-    if (year.ind == 2001) {
-      climate_importance_list_t1[[bird]] <- climate_importance
-      land_use_importance_list_t1[[bird]] <- land_use_importance
-    } else if (year.ind == 2019) {
-      climate_importance_list_t2[[bird]] <- climate_importance
-      land_use_importance_list_t2[[bird]] <- land_use_importance
-    }
+    # # Store the importance scores for climate and land use variables
+    # if (year.ind == 2001) {
+    #   climate_importance_list_t1[[bird]] <- climate_importance
+    #   land_use_importance_list_t1[[bird]] <- land_use_importance
+    # } else if (year.ind == 2019) {
+    #   climate_importance_list_t2[[bird]] <- climate_importance
+    #   land_use_importance_list_t2[[bird]] <- land_use_importance
+    # }
     
     # Calculate the ratio of climate to land use importance
     importance_ratio <- climate_importance / land_use_importance
     
-    # Store the importance ratio for the current year and bird
-    if (year.ind == 2001) {
-      importance_ratio_list_t1[[bird]] <- importance_ratio
-    } else if (year.ind == 2019) {
-      importance_ratio_list_t2[[bird]] <- importance_ratio
-    }
+    # # Store the importance ratio for the current year and bird
+    # if (year.ind == 2001) {
+    #   importance_ratio_list_t1[[bird]] <- importance_ratio
+    # } else if (year.ind == 2019) {
+    #   importance_ratio_list_t2[[bird]] <- importance_ratio
+    # }
     
     # browse()
     
@@ -189,7 +196,10 @@ for(year.ind in years){
       Bird = bird,
       Land_Use_Importance = land_use_importance,
       Climate_Importance = climate_importance,
-      Importance_Ratio = importance_ratio
+      Importance_Ratio = importance_ratio,
+      var.imp = var_importance,
+      var.imp.adj = var_imp_adj,
+      vars = names(var_imp_adj)
     )
     
     tibble_data_combined[[length(tibble_data_combined) + 1]] <- tibble_entry
@@ -198,55 +208,73 @@ for(year.ind in years){
 
 final_tibble <- bind_rows(tibble_data_combined)
 
-# ratio of the relative importance of climate:land use variables and the change from 2001 - 2019
-
-importance_ratio_t1 <- reshape2::melt(importance_ratio_list_t1) %>%
-  mutate(year = 2001) %>%
-  rename(imp.ratio = value, bird = L1)
-
-importance_ratio_t2 <- reshape2::melt(importance_ratio_list_t2)  %>%
-  mutate(year = 2019) %>%
-  rename(imp.ratio = value, bird = L1)
-
-imp_ratio <- rbind(importance_ratio_t1, importance_ratio_t2)
-
-save(imp_ratio, file = "data/importance_ratio.rda")
+# # ratio of the relative importance of climate:land use variables and the change from 2001 - 2019
+# 
+# importance_ratio_t1 <- reshape2::melt(importance_ratio_list_t1) %>%
+#   mutate(year = 2001) %>%
+#   rename(imp.ratio = value, bird = L1)
+# 
+# importance_ratio_t2 <- reshape2::melt(importance_ratio_list_t2)  %>%
+#   mutate(year = 2019) %>%
+#   rename(imp.ratio = value, bird = L1)
+# 
+# imp_ratio <- rbind(importance_ratio_t1, importance_ratio_t2)
+# 
+# save(imp_ratio, file = "data/importance_ratio.rda")
 
 # imp_ratio <- importance_ratio_t1 %>% left_join(importance_ratio_t2, by = "bird") %>%
 #   relocate(bird) %>% rowwise() %>% mutate(d.imp.ratio = imp.ratio.t2 - imp.ratio.t1)
 
 
+# ---- data transformation ----
+
+ratios <- final_tibble %>%
+  select(Year, Bird, var.imp, vars) %>%
+  mutate(var.imp.trans = ifelse(var.imp < 0, 0, var.imp),
+         var.desig = ifelse(grepl("log", vars), "land", "climate")) %>%
+  group_by(Year, Bird) %>%
+  mutate(cum_imp = sum(var.imp.trans),
+         rel.var.imp = var.imp.trans/cum_imp) %>%
+  group_by(Year, Bird, var.desig) %>%
+  mutate(sum_imp_vars = sum(rel.var.imp)) %>%
+  group_by(Year, Bird) %>%
+  reframe(ratio = sum_imp_vars[var.desig == "climate"] / sum_imp_vars[var.desig == "land"]) %>%
+  distinct() %>%
+  filter(Bird != "Amphispiza_bilineata")
+
 # ---- plot results in a paired barplot ----
 
-load("data/importance_ratio.rda")
+# load("data/importance_ratio.rda")
 
 library(tidyverse)
 library(ggplot2)
 library(ggtext)
 library(showtext)
 
-showtext_auto()
-showtext_opts(dpi = 300)
+# showtext_auto()
+# showtext_opts(dpi = 300)
 
 # Colors we will use later
-color_palette <- thematic::okabe_ito(2)
+color_palette <- c("royalblue4", "royalblue")  # thematic::okabe_ito(2)
 names(color_palette) <- c(2001, 2019)
 
-segment_helper <- imp_ratio %>%
-  pivot_wider(names_from = year, values_from = imp.ratio, names_prefix = 'year_') |>
+# colors()
+
+segment_helper <- ratios %>%
+  pivot_wider(names_from = Year, values_from = ratio, names_prefix = 'year_') |>
   mutate(
     change = year_2019 - year_2001,
-    bird = fct_reorder(bird, desc(change) * if_else(change < 0, -1, 1))
+    Bird = fct_reorder(Bird, year_2001 * if_else(change < 0, -1, 1))
   )
 
-paired_barplot <- imp_ratio %>%
+paired_barplot <- ratios %>%
   # filter(bird %in% sample(unique(bird), size = 25)) %>%
-  mutate(year = factor(year)) %>%
-  mutate(bird = fct_reorder(bird, imp.ratio, max)) %>%
-  ggplot2::ggplot(aes(x = imp.ratio, y = bird, col = year)) +
+  mutate(year = factor(Year)) %>%
+  mutate(bird = fct_reorder(Bird, ratio, max)) %>%
+  ggplot2::ggplot(aes(x = ratio, y = Bird, col = year)) +
   geom_segment(
     data = segment_helper,
-    aes(x = year_2001, xend = year_2019, y = bird, yend = bird),
+    aes(x = year_2001, xend = year_2019, y = Bird, yend = Bird),
     col = 'grey60',
     linewidth = 0.5
   ) +
@@ -257,7 +285,10 @@ paired_barplot <- imp_ratio %>%
     y = element_blank()
   ) +
   theme(axis.text=element_text(size=5)) +
-  scale_x_continuous(expand = expansion(mult = 0.1))
+  scale_x_continuous(expand = expansion(mult = 0.1)) +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "grey40")
+
+paired_barplot
 
 ggsave(filename = "figures/paired_var_imp_ratio_RF.png", plot = paired_barplot, width = 8, height = 6, dpi = 300)
   

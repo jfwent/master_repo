@@ -103,20 +103,20 @@ lc.df <- land_use_area %>%
   )) %>%
   select(year, segment, contains("log"))
 
-lc.df <- land_use_area %>%
-  select(-c(ecoregion, tot.area.m2, route, barren.area.m2, wet.area.m2)) %>%
-  mutate(PC1 = urban.high.area.m2 + urban.low.area.m2 + grass.area.m2 + pasture.area.m2,
-         PC2 = forest.area.m2 + crop.area.m2) %>%
-  select(-c(urban.high.area.m2, urban.low.area.m2,
-            grass.area.m2, pasture.area.m2, forest.area.m2, crop.area.m2)) %>%
-  mutate(across(
-    .cols = contains("area") | contains("PC"),
-    .fns = c(
-      log = \(x) log(x + 900))
-    ,
-    .names = "{.col}.{.fn}"
-  )) %>%
-  select(year, segment, contains("log"))
+# lc.df <- land_use_area %>%
+#   select(-c(ecoregion, tot.area.m2, route, barren.area.m2, wet.area.m2)) %>%
+#   mutate(PC1 = urban.high.area.m2 + urban.low.area.m2 + grass.area.m2 + pasture.area.m2,
+#          PC2 = forest.area.m2 + crop.area.m2) %>%
+#   select(-c(urban.high.area.m2, urban.low.area.m2,
+#             grass.area.m2, pasture.area.m2, forest.area.m2, crop.area.m2)) %>%
+#   mutate(across(
+#     .cols = contains("area") | contains("PC"),
+#     .fns = c(
+#       log = \(x) log(x + 900))
+#     ,
+#     .names = "{.col}.{.fn}"
+#   )) %>%
+#   select(year, segment, contains("log"))
 
 lc.t1 <- lc.df %>% filter(year == 2001) %>% select(-year)
 
@@ -187,6 +187,10 @@ clim_rmse <- tibble(bird = character(),
                      mean_rmse = numeric(),
                      n.folds = numeric())
 
+r2.clim <- tibble(bird = character(),
+                  variable = character(),
+                  adj.r2 = numeric())
+
 for(variable.ind in climate_vars){
   
   print(paste0("working on ", which(climate_vars == variable.ind), "/", length(climate_vars), " ..."))
@@ -195,6 +199,10 @@ for(variable.ind in climate_vars){
     bird.tmp <- d.abund.climate %>%
       filter(animal_jetz == bird.ind) %>%
       tibble::rowid_to_column(., "ID")
+    
+    full.mod <- fit_lm(bird.tmp, var = climate_vars)
+    
+    adj.r2.now <- summary(full.mod)$adj.r.squared
     
     folds <- caret::groupKFold(bird.tmp$segment, k = 10)
     
@@ -219,20 +227,27 @@ for(variable.ind in climate_vars){
     
     mean_rmse <- mean(rmse_values)
     
-    new_row <- tibble(bird = bird.ind, mean_rmse = mean_rmse, variable = variable.ind, n.folds = length(folds))
-    clim_rmse <- bind_rows(clim_rmse, new_row)
+    new_row1 <- tibble(bird = bird.ind, variable = variable.ind,
+                       adj.r2 = adj.r2.now)
+    
+    new_row2 <- tibble(bird = bird.ind, mean_rmse = mean_rmse,
+                      variable = variable.ind, n.folds = length(folds))
+    
+    r2.clim <- bind_rows(r2.clim, new_row1)
+    clim_rmse <- bind_rows(clim_rmse, new_row2)
   }
 }
 
 rm(bird_model, variable.ind, climate_vars, birds,
-   bird.ind, mean_rmse, n_fold, num_folds, predicted_values, rmse, rmse_values, new_row, folds,
+   bird.ind, mean_rmse, n_fold, num_folds, predicted_values, rmse, rmse_values,
+   new_row1, new_row2, folds,
    bird.test, bird.tmp, bird.train)
 
 # ---- LM models land use variables ----
 
 birds <- sort(unique(d.abund.lc$animal_jetz))
 # land_use_vars <- colnames(d.abund.lc[4:13])
-land_use_vars <- colnames(d.abund.lc[4:7])
+land_use_vars <- colnames(d.abund.lc[4:13])
 
 num_folds <- 10
 
@@ -240,6 +255,10 @@ lc_rmse <- tibble(bird = character(),
                     variable = character(),
                     mean_rmse = numeric(),
                     n.folds = numeric())
+
+r2.lc<- tibble(bird = character(),
+                  variable = character(),
+                  adj.r2 = numeric())
 
 set.seed(123)
 
@@ -253,6 +272,10 @@ for(variable.ind in land_use_vars){
       filter(animal_jetz == bird.ind) %>%
       tibble::rowid_to_column(., "ID")
     
+    full.mod <- fit_lm(bird.tmp, var = land_use_vars)
+    
+    adj.r2.now <- summary(full.mod)$adj.r.squared
+    
     folds <- caret::groupKFold(bird.tmp$segment, k = 10)
     
     rmse_values <- numeric(num_folds)
@@ -276,20 +299,27 @@ for(variable.ind in land_use_vars){
     
     mean_rmse <- mean(rmse_values)
     
-    new_row <- tibble(bird = bird.ind, mean_rmse = mean_rmse, variable = variable.ind, n.folds = length(folds))
-    lc_rmse <- bind_rows(lc_rmse, new_row)
+    new_row1 <- tibble(bird = bird.ind, variable = variable.ind,
+                       adj.r2 = adj.r2.now)
+    
+    new_row2 <- tibble(bird = bird.ind, mean_rmse = mean_rmse,
+                       variable = variable.ind, n.folds = length(folds))
+    
+    r2.lc <- bind_rows(r2.lc, new_row1)
+    lc_rmse <- bind_rows(lc_rmse, new_row2)
+    
   }
-  
 }
 
 rm(bird_model, variable.ind, land_use_vars, birds,
-   bird.ind, mean_rmse, n_fold, num_folds, predicted_values, rmse, rmse_values, new_row, folds,
+   bird.ind, mean_rmse, n_fold, num_folds, predicted_values, rmse, rmse_values,
+   new_row1, new_row2, folds,
    bird.test, bird.tmp, bird.train)
 
 
 # ---- build climate boxplots  ----
 
-bp_clim <- clim_rmse %>%
+bp_rmse_clim <- clim_rmse %>%
   ggplot2::ggplot(aes(y = variable, x = mean_rmse, fill = variable)) +
   geom_boxplot(width = 0.3,
                outlier.size = 1,
@@ -319,12 +349,46 @@ bp_clim <- clim_rmse %>%
     legend.key.width = unit(5, "mm"),
   )
 
-ggplot2::ggsave(filename = "figures/ClimVar_RMSE_dAbund.png", plot = bp_clim, width = 8, height = 6, dpi = 300)
+bp_r2_clim <- r2.clim %>%
+  ggplot2::ggplot(aes(y = variable, x = adj.r2, fill = variable)) +
+  geom_boxplot(width = 0.3,
+               outlier.size = 1,
+               alpha = 0.5) +
+  geom_point(
+    aes (color = variable),
+    shape = "|",
+    size = 1.8,
+    alpha = 0.7,
+    position = position_nudge(y = -0.275)
+  ) +
+  ggdist::stat_slab(
+    position = position_nudge(y = 0.200),
+    height = 0.55
+  )+
+  stat_summary(
+    fun.data = mean_se, # Use mean and standard error
+    geom = "point",
+    color = "black",
+    size = 1.5
+  ) +
+  theme(
+    # legend.key.size = unit(5, "mm"),
+    legend.text = element_text(size = 7, color = "black"),
+    legend.margin = margin(t=-0.6, unit = "cm"),
+    legend.position = "right",
+    legend.key.width = unit(5, "mm"),
+  )
+
+bp_r2_clim
+
+ggplot2::ggsave(filename = "figures/ClimVar_adj_r2_dAbund.png", plot = bp_r2_clim, width = 8, height = 6, dpi = 300)
+
+# ggplot2::ggsave(filename = "figures/ClimVar_RMSE_dAbund.png", plot = bp_clim, width = 8, height = 6, dpi = 300)
 
 
 # ---- build land use boxplots ----
 
-bp_lc_outliers <- lc_rmse %>%
+bp_lc_rmse_outliers <- lc_rmse %>%
   ggplot2::ggplot(aes(y = variable, x = mean_rmse, fill = variable)) +
   geom_boxplot(width = 0.3,
                outlier.size = 1,
@@ -352,7 +416,7 @@ bp_lc_outliers
 ggplot2::ggsave(filename = "figures/LCVar_bp_RMSE_dAbund.png", plot = bp_lc_outliers, width = 8, height = 6, dpi = 300)
 
 
-bp_lc_no_outliers <- lc_rmse %>%
+bp_lc_rmse_no_outliers <- lc_rmse %>%
   ggplot2::ggplot(aes(y = variable, x = mean_rmse, fill = variable)) +
   geom_boxplot(width = 0.3,
                outlier.size = 1,
@@ -379,3 +443,31 @@ bp_lc_no_outliers <- lc_rmse %>%
 bp_lc_no_outliers
 
 ggplot2::ggsave(filename = "figures/LCVar_bp_RMSE_dAbund_noOutliers.png", plot = bp_lc_no_outliers, width = 8, height = 6, dpi = 300)
+
+bp_lc_r2 <- r2.lc %>%
+  ggplot2::ggplot(aes(y = variable, x = adj.r2, fill = variable)) +
+  geom_boxplot(width = 0.3,
+               outlier.size = 1,
+               alpha = 0.5) +
+  geom_point(
+    aes (color = variable),
+    shape = "|",
+    size = 1.8,
+    alpha = 0.7,
+    position = position_nudge(y = -0.275)
+  ) +
+  ggdist::stat_slab(
+    position = position_nudge(y = 0.200),
+    height = 0.55
+  ) +
+  stat_summary(
+    fun.data = mean_se, # Use mean and standard error
+    geom = "point",
+    color = "black",
+    size = 1.5
+  )
+
+bp_lc_r2
+
+ggplot2::ggsave(filename = "figures/LCVar_bp_R2_dAbund.png", plot = bp_lc_r2, width = 8, height = 6, dpi = 300)
+
