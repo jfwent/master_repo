@@ -191,16 +191,35 @@ r2.clim <- tibble(bird = character(),
                   variable = character(),
                   adj.r2 = numeric())
 
+clim_mods <- list()
+
+significant_terms <- tibble(bird = character(),
+                            variable = character(),
+                            p.values = numeric()
+                            )
+
 for(variable.ind in climate_vars){
   
   print(paste0("working on ", which(climate_vars == variable.ind), "/", length(climate_vars), " ..."))
+  
+  bird_mods <- list()
   
   for(bird.ind in birds){
     bird.tmp <- d.abund.climate %>%
       filter(animal_jetz == bird.ind) %>%
       tibble::rowid_to_column(., "ID")
     
-    full.mod <- fit_lm(bird.tmp, var = climate_vars)
+    full.mod <- fit_lm(bird.tmp, var = variable.ind)
+    
+    bird_mods[[bird.ind]] <- full.mod
+    
+    p.val <- summary(full.mod)$coefficients[,4]
+    
+    new_row <- tibble(bird = bird.ind,
+                      variable = names(p.val),
+                      p.values = p.val)
+    
+    significant_terms <- bind_rows(significant_terms, new_row)
     
     adj.r2.now <- summary(full.mod)$adj.r.squared
     
@@ -225,6 +244,9 @@ for(variable.ind in climate_vars){
       rmse_values[n_fold] <- rmse
     }
     
+    
+    clim_mods[[variable.ind]] <- bird_mods
+    
     mean_rmse <- mean(rmse_values)
     
     new_row1 <- tibble(bird = bird.ind, variable = variable.ind,
@@ -241,7 +263,23 @@ for(variable.ind in climate_vars){
 rm(bird_model, variable.ind, climate_vars, birds,
    bird.ind, mean_rmse, n_fold, num_folds, predicted_values, rmse, rmse_values,
    new_row1, new_row2, folds,
-   bird.test, bird.tmp, bird.train)
+   bird.test, bird.tmp, bird.train, full.mod, adj.r2.now,
+   p.val, p.val.ind, p.val.quad, new_row)
+
+sig.terms <- significant_terms %>% filter(p.values <= 0.05,
+                                          variable != "(Intercept)",
+                                          variable != grepl("^", variable))
+
+length(unique(sig.terms$bird))
+length(unique(sig.terms$variable))
+
+# ---- find the birds with significant terms ----
+
+for(var.ind in climate_vars){
+  
+  
+  
+}
 
 # ---- LM models land use variables ----
 

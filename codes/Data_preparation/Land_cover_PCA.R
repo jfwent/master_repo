@@ -6,7 +6,7 @@
 library(tidyverse)
 library(ade4)
 library(factoextra)
-library(corrplot)
+# library(corrplot)
 
 # ---- load data ----
 
@@ -43,9 +43,22 @@ lc.pca <- dudi.pca(land.use.df[,4:12],
 var <- get_pca_var(lc.pca)
 var$cos2
 
+PC1 <- lc.pca$li$Axis1
+PC2 <- lc.pca$li$Axis2
+
+lc.pcs <- tibble(segment = land.use.df$segment,
+                 year = land.use.df$year,
+                 PC1 = PC1,
+                 PC2 = PC2) %>%
+  group_by(segment) %>%
+  arrange(segment) %>%
+  mutate(delta.PC1 = PC1 - lag(PC1),
+         delta.PC2 = PC2 - lag(PC2)) %>%
+  na.omit()
+
 # corrplot(var$cos2, is.corr=FALSE)
 fviz_cos2(lc.pca, choice = "var", axes = 1:2)
-corrplot(var$contrib, is.corr=FALSE)
+corrplot::corrplot(var$contrib, is.corr=FALSE)
 
 # ---- plot results ----
 
@@ -60,7 +73,7 @@ fviz_pca_ind(lc.pca, geom = "point", col.ind = "cos2", alpha.ind = "contrib") +
 
 fviz_pca_ind(lc.pca, geom = "point", col.ind = "contrib") +
   scale_color_gradient2(low="white", mid="blue",
-                        high="red", midpoint=0.05)
+                        high="red", midpoint=0.06)
 
 fviz_eig(lc.pca)
 
@@ -79,9 +92,9 @@ biplot <- fviz_pca_biplot(lc.pca, label ="var",
 
 biplot
 
-ggsave("figures/PCA_LandUse_biplot.png", plot = biplot, width = 8, height = 6, dpi = 300)
-ggsave("figures/var_contrib_PC1.png", plot = var_contrib_PC1, width = 8, height = 6, dpi = 300)
-ggsave("figures/var_contrib_PC2.png", plot = var_contrib_PC2, width = 8, height = 6, dpi = 300)
+# ggsave("figures/PCA_LandUse_biplot.png", plot = biplot, width = 8, height = 6, dpi = 300)
+# ggsave("figures/var_contrib_PC1.png", plot = var_contrib_PC1, width = 8, height = 6, dpi = 300)
+# ggsave("figures/var_contrib_PC2.png", plot = var_contrib_PC2, width = 8, height = 6, dpi = 300)
 
 
 # ----- old -----

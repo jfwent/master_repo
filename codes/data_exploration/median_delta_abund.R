@@ -29,7 +29,7 @@ load("data/d.abund.min40.rda")
 
 median.d.abund.min40 <- d.abund.min40 %>%
   group_by(animal_jetz) %>%
-  summarize(median.d.abund = median(delta.abund), .groups = "drop")
+  summarize(median.d.abund = median(delta.abund))
 
 # ---- land use data ----
 
@@ -119,6 +119,7 @@ rm(climate_df, climate.df, clim.t1, dclim)
 # load("data/Gen_length/Bird_full_df.rda")
 # load("data/fun_traits/FuncDat.rda")
 # load("data/Brain_size/brain_sub.rda")
+# load("data/Clutch_sizes/clutch_sizes.rda")
 # 
 # ACAD <- read.csv("/Users/jonwent/Desktop/ETHZ/master_thesis/Data/ACAD Global 2021.02.05-filtered.csv")
 # 
@@ -149,7 +150,7 @@ rm(climate_df, climate.df, clim.t1, dclim)
 # 
 # hab.breadth <- readxl::read_xlsx("/Users/jonwent/Desktop/ETHZ/master_thesis/Data/doi_10.5061_dryad.sf7m0cg2k__v3/Dataset_Ducatez_et_al.xlsx") %>%
 #   select(Species, HabitatBreadth, TotalInnovations) %>%
-#   rename(animal_jetz = Species, 
+#   rename(animal_jetz = Species,
 #          hab.breadth = HabitatBreadth,
 #          tot.innov = TotalInnovations)
 # 
@@ -170,7 +171,12 @@ rm(climate_df, climate.df, clim.t1, dclim)
 # 
 # # length(unique(avonet$animal_jetz)) # 564 species
 # 
+# clutch <- clutch_dat %>% select(animal_jetz, Clutch); rm(clutch_dat)
+# 
+# # length(unique(clutch$animal_jetz)) # 3205 species
+# 
 # species.traits <- gen.length %>%
+#   left_join(clutch, by = "animal_jetz") %>%
 #   left_join(hab.breadth, by = "animal_jetz") %>%
 #   left_join(avonet, by = "animal_jetz") %>%
 #   left_join(diet.breadth, by = "animal_jetz") %>%
@@ -179,7 +185,7 @@ rm(climate_df, climate.df, clim.t1, dclim)
 #   left_join(sauer.sub, by = "animal_jetz") %>%
 #   filter(animal_jetz %in% birds)
 # 
-# rm(hab.breadth, gen.length, 
+# rm(hab.breadth, gen.length,
 #    avonet, diet.breadth, brain.df,
 #    ACAD.sub, sauer.sub, AOU_spec_name, birds)
 
@@ -194,12 +200,11 @@ load("data/species_traits.rda")
 full.min40 <- median.d.abund.min40 %>%
   left_join(species.traits, by = "animal_jetz") %>%
   mutate(na.num = rowSums(is.na(.))) %>%
-  filter(na.num != 14) %>%
+  filter(na.num != 15) %>%
   select(-na.num) %>%
-  relocate(Common.Name, .after = animal_jetz) %>%
-  left_join(lc.df, by = "segment")
+  relocate(Common.Name, .after = animal_jetz)
 
-# summary(full.min40)
+summary(full.min40)
 
 median.abund.lc <- d.abund.min40 %>%
   select(segment, animal_jetz, delta.abund) %>%
