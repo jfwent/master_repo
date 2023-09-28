@@ -14,10 +14,10 @@ load("data/d.abund.min40.rda")
 
 # load("data/d.abund.min6.rda")
 # load("data/d.abund.min10.rda")
-# load("data/Lica/BBS_partition_abundance.rda")
+load("data/Lica/BBS_partition_abundance.rda")
 
-# AOU_spec_name <- BBS_partition_abundance %>% select(AOU, animal_jetz) %>% distinct()
-# birds <- unique(BBS_partition_abundance$animal_jetz); rm(BBS_partition_abundance)
+AOU_spec_name <- BBS_partition_abundance %>% select(AOU, animal_jetz) %>% distinct()
+birds <- unique(BBS_partition_abundance$animal_jetz); rm(BBS_partition_abundance)
 
 # median.d.abund.min6 <- d.abund.min6 %>%
 #   group_by(animal_jetz) %>%
@@ -34,6 +34,8 @@ median.d.abund.min40 <- d.abund.min40 %>%
 # ---- land use data ----
 
 load("data/Land_use/land_use_area_t1_t2.rda")
+
+load("data/Landuse_PC1_PC2.rda")
 
 lc.df <- land_use_area %>%
   select(-c(ecoregion, tot.area.m2, route, barren.area.m2)) %>%
@@ -80,7 +82,8 @@ dlc <- lc.df %>%
   select(segment, contains("delta")) %>%
   na.omit()
 
-lc.df <- lc.t1 %>% left_join(dlc, by = "segment")
+lc.df <- lc.t1 %>% left_join(dlc, by = "segment")%>%
+  left_join(lc.pcs, by = "segment") %>% select(-year)
 
 rm(dlc, land_use_area, lc.t1)
 
@@ -156,7 +159,9 @@ rm(climate_df, climate.df, clim.t1, dclim)
 # 
 # # length(unique(hab.breadth$animal_jetz)) # 8645
 # 
-# gen.length <- Bird_full_df %>% select(animal_jetz, GenLength); rm(Bird_full_df)
+# gen.length <- Bird_full_df %>% select(animal_jetz, GenLength, Mean_clutch_size, Migrant) %>%
+#   mutate(Clutch.Bird = as.numeric(Mean_clutch_size)) %>%
+#   select(-Mean_clutch_size); rm(Bird_full_df)
 # 
 # # length(unique(gen.length$animal_jetz)) # 11126 species
 # 
@@ -188,9 +193,9 @@ rm(climate_df, climate.df, clim.t1, dclim)
 # rm(hab.breadth, gen.length,
 #    avonet, diet.breadth, brain.df,
 #    ACAD.sub, sauer.sub, AOU_spec_name, birds)
-
+# 
 # summary(species.traits)
-
+# 
 # save(species.traits, file = "data/species_traits.rda")
 
 load("data/species_traits.rda")
@@ -200,7 +205,7 @@ load("data/species_traits.rda")
 full.min40 <- median.d.abund.min40 %>%
   left_join(species.traits, by = "animal_jetz") %>%
   mutate(na.num = rowSums(is.na(.))) %>%
-  filter(na.num != 15) %>%
+  filter(na.num != 17) %>%
   select(-na.num) %>%
   relocate(Common.Name, .after = animal_jetz)
 
@@ -267,7 +272,7 @@ p1 <- ggplot(full.min40, aes(y = median.d.abund, x = log(GenLength))) +
   ylab("Median delta Abund") +
   xlab("log(Generation length)")  +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p2 <- ggplot(full.min40, aes(y = median.d.abund, x = diet.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -276,7 +281,7 @@ p2 <- ggplot(full.min40, aes(y = median.d.abund, x = diet.breadth)) +
   xlab("Diet breadth") +
   ylab("")  +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p3 <- ggplot(full.min40, aes(y = median.d.abund, x = rel_brain_size)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -284,7 +289,7 @@ p3 <- ggplot(full.min40, aes(y = median.d.abund, x = rel_brain_size)) +
   xlab("Relative brain size") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p4 <- ggplot(full.min40, aes(y = median.d.abund, x = hand.wing.ind)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -293,7 +298,7 @@ p4 <- ggplot(full.min40, aes(y = median.d.abund, x = hand.wing.ind)) +
   xlab("Hand-wing index") +
   ylab("Median delta Abund")  +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p5 <- ggplot(full.min40, aes(y = median.d.abund, x = log(body.mass))) +
   geom_point(size = 2, alpha = 0.5) +
@@ -302,7 +307,7 @@ p5 <- ggplot(full.min40, aes(y = median.d.abund, x = log(body.mass))) +
   xlab("log(Body mass)") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p6 <- ggplot(full.min40, aes(y = median.d.abund, x = hab.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -311,13 +316,31 @@ p6 <- ggplot(full.min40, aes(y = median.d.abund, x = hab.breadth)) +
   xlab("Habitat breadth") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
-final_plot <- p1 + p2 + p3 + p4 + p5 + p6
+p7 <- ggplot(full.min40, aes(y = median.d.abund, x = Clutch.Bird)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth()+
+  # geom_abline() +
+  xlab("Clutch size (Jiménez-Ortega)") +
+  ylab("") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  ylim(-5,3)
+
+p8 <- ggplot(full.min40, aes(y = median.d.abund, x = Clutch)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth()+
+  # geom_abline() +
+  xlab("Clutch size (Jetz)") +
+  ylab("") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  ylim(-5,3)
+
+final_plot <- p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8
 
 final_plot
 
-ggsave(filename = "figures/species_traits_median_abund_min40.png", plot = final_plot, width = 8, height = 6, dpi = 300)
+# ggsave(filename = "figures/species_traits_median_abund_min40.png", plot = final_plot, width = 8, height = 6, dpi = 300)
 
 # ----- species traits boxplots -----
 
@@ -325,16 +348,16 @@ p1 <- ggplot(full.min40, aes(y = median.d.abund, x = log(tot.innov), group = tot
   geom_boxplot() +
   ylab("Median delta abundance") +
   xlab("log(Innovativeness)")  +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  geom_hline(yintercept = 0, linetype = "dashed")  +
+  ylim(-5,3)
 
 p2 <- ggplot(full.min40, aes(y = median.d.abund, x = Trophic.Niche, group = Trophic.Niche)) +
   geom_boxplot()  +
   xlab("Trophic Niche") +
   ylab("") +
   theme(axis.text.x = element_text(angle = 45, hjust = 0.8)) +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  geom_hline(yintercept = 0, linetype = "dashed")  +
+  ylim(-5,3)
 
 p3 <- ggplot(full.min40, aes(y = median.d.abund, x = Trophic.Level, group = Trophic.Level)) +
   geom_boxplot() +
@@ -342,14 +365,21 @@ p3 <- ggplot(full.min40, aes(y = median.d.abund, x = Trophic.Level, group = Trop
   ylab("") +
   theme(axis.text.x = element_text(angle = 45, hjust = 0.8)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
-  
+  ylim(-5,3)
 
-boxplot <- p1 + p2 + p3
+p4 <- ggplot(full.min40, aes(y = median.d.abund, x = Migrant, group = Migrant)) +
+  geom_boxplot() +
+  xlab("Migratory status") +
+  ylab("") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.8)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  ylim(-5,3)
+
+boxplot <- p1 + p2 + p3 + p4
 
 boxplot
 
-ggsave(filename = "figures/boxplot_species_traits_min40.png", plot = boxplot, width = 8, height = 6, dpi = 300)
+# ggsave(filename = "figures/boxplot_species_traits_min40.png", plot = boxplot, width = 8, height = 6, dpi = 300)
 
 # ---- land cover plots ----
 
@@ -360,7 +390,7 @@ p1 <- ggplot(median.abund.lc, aes(y = median.abund, x = forest.area.m2.log)) +
   ylab("Median delta Abund") +
   xlab("Forest area")  +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p2 <- ggplot(median.abund.lc, aes(y = median.abund, x = crop.area.m2.log)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -369,7 +399,7 @@ p2 <- ggplot(median.abund.lc, aes(y = median.abund, x = crop.area.m2.log)) +
   xlab("Crop area") +
   ylab("")  +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p3 <- ggplot(median.abund.lc, aes(y = median.abund, x = wet.area.m2.log)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -377,7 +407,7 @@ p3 <- ggplot(median.abund.lc, aes(y = median.abund, x = wet.area.m2.log)) +
   xlab("Wet area") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p4 <- ggplot(median.abund.lc, aes(y = median.abund, x = urban.area.m2.log)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -386,7 +416,7 @@ p4 <- ggplot(median.abund.lc, aes(y = median.abund, x = urban.area.m2.log)) +
   xlab("Urban area") +
   ylab("Median delta Abund")  +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p5 <- ggplot(median.abund.lc, aes(y = median.abund, x = all.grass.area.m2.log)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -395,19 +425,37 @@ p5 <- ggplot(median.abund.lc, aes(y = median.abund, x = all.grass.area.m2.log)) 
   xlab("Grass area") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
-land_cover_plot <- p1 + p2 + p3 + p4 + p5
+p6 <- ggplot(median.abund.lc, aes(y = median.abund, x = PC1)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth()+
+  # geom_abline() +
+  xlab("PC1") +
+  ylab("") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  ylim(-5,3)
+
+p7 <- ggplot(median.abund.lc, aes(y = median.abund, x = PC2)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth()+
+  # geom_abline() +
+  xlab("PC2") +
+  ylab("") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  ylim(-5,3)
+
+land_cover_plot <- p1 + p2 + p3 + p4 + p5 + p6 + p7
 land_cover_plot
 
-p1 <- ggplot(median.abund.lc, aes(y = median.abund, x = delta.forest.area.m2.log)) +
+p1 <- ggplot(median.abund.lc, aes(y = median.abund, x = log(abs(delta.forest.area.m2.log)))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth() +
   # geom_abline() +
   ylab("Median delta Abund") +
-  xlab("delta Forest area")  +
+  xlab("log(abs(delta Forest area))")  +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p2 <- ggplot(median.abund.lc, aes(y = median.abund, x = delta.crop.area.m2.log)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -416,7 +464,7 @@ p2 <- ggplot(median.abund.lc, aes(y = median.abund, x = delta.crop.area.m2.log))
   xlab("delta Crop area") +
   ylab("")  +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p3 <- ggplot(median.abund.lc, aes(y = median.abund, x = delta.wet.area.m2.log)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -424,7 +472,7 @@ p3 <- ggplot(median.abund.lc, aes(y = median.abund, x = delta.wet.area.m2.log)) 
   xlab("delta Wet area") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p4 <- ggplot(median.abund.lc, aes(y = median.abund, x = delta.urban.area.m2.log)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -433,7 +481,7 @@ p4 <- ggplot(median.abund.lc, aes(y = median.abund, x = delta.urban.area.m2.log)
   xlab("delta Urban area") +
   ylab("Median delta Abund")  +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p5 <- ggplot(median.abund.lc, aes(y = median.abund, x = delta.all.grass.area.m2.log)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -441,12 +489,30 @@ p5 <- ggplot(median.abund.lc, aes(y = median.abund, x = delta.all.grass.area.m2.
   # geom_abline() +
   xlab("delta Grass area") +
   ylab("") +
+  geom_hline(yintercept = 0, linetype = "dashed") #+
+  # ylim(-5,3)
+
+p6 <- ggplot(median.abund.lc, aes(y = median.abund, x = delta.PC1)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth()+
+  # geom_abline() +
+  xlab("delta PC1") +
+  ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
-land_cover_plot <- p1 + p2 + p3 + p4 + p5
+p7 <- ggplot(median.abund.lc, aes(y = median.abund, x = delta.PC2)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth()+
+  # geom_abline() +
+  xlab("delta PC2") +
+  ylab("") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  ylim(-5,3)
 
-land_cover_plot
+delta_land_cover_plot <- p1 + p2 + p3 + p4 + p5 + p6 + p7
+
+delta_land_cover_plot
 
 # ---- climate plots ----
 p1 <- ggplot(median.abund.clim, aes(y = median.abund, x = tmax.mean)) +
@@ -456,7 +522,7 @@ p1 <- ggplot(median.abund.clim, aes(y = median.abund, x = tmax.mean)) +
   ylab("Median delta Abund") +
   xlab("Max. temp.")  +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p2 <- ggplot(median.abund.clim, aes(y = median.abund, x = delta.tmax.mean)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -465,7 +531,7 @@ p2 <- ggplot(median.abund.clim, aes(y = median.abund, x = delta.tmax.mean)) +
   xlab("Delta max. temp.") +
   ylab("")  +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p3 <- ggplot(median.abund.clim, aes(y = median.abund, x = tmin.mean)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -473,7 +539,7 @@ p3 <- ggplot(median.abund.clim, aes(y = median.abund, x = tmin.mean)) +
   xlab("Min. temp.") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p4 <- ggplot(median.abund.clim, aes(y = median.abund, x = delta.tmin.mean)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -482,7 +548,7 @@ p4 <- ggplot(median.abund.clim, aes(y = median.abund, x = delta.tmin.mean)) +
   xlab("Delta min. temp.") +
   ylab("Median delta Abund")  +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p5 <- ggplot(median.abund.clim, aes(y = median.abund, x = swb.mean)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -491,7 +557,7 @@ p5 <- ggplot(median.abund.clim, aes(y = median.abund, x = swb.mean)) +
   xlab("SWB") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p6 <- ggplot(median.abund.clim, aes(y = median.abund, x = delta.swb.mean)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -500,12 +566,12 @@ p6 <- ggplot(median.abund.clim, aes(y = median.abund, x = delta.swb.mean)) +
   xlab("Delta SWB") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
-climate_bp1 <- p1 + p2 + p3 + p4 + p5 + p6
-climate_bp1
+climate_plot1 <- p1 + p2 + p3 + p4 + p5 + p6
+climate_plot1
 
-ggsave(filename = "figures/MedianAbund_Clim1.png", plot = climate_bp1, width = 8, height = 6, dpi = 300)
+# ggsave(filename = "figures/MedianAbund_Clim1.png", plot = climate_bp1, width = 8, height = 6, dpi = 300)
 
 p1 <- ggplot(median.abund.clim, aes(y = median.abund, x = cmi.diff.mean)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -514,7 +580,7 @@ p1 <- ggplot(median.abund.clim, aes(y = median.abund, x = cmi.diff.mean)) +
   ylab("Median delta Abund") +
   xlab("CMI diff.")  +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p2 <- ggplot(median.abund.clim, aes(y = median.abund, x = delta.cmi.diff.mean)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -523,7 +589,7 @@ p2 <- ggplot(median.abund.clim, aes(y = median.abund, x = delta.cmi.diff.mean)) 
   xlab("Delta CMI diff.") +
   ylab("")  +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p3 <- ggplot(median.abund.clim, aes(y = median.abund, x = cmi.annual.mean)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -531,7 +597,7 @@ p3 <- ggplot(median.abund.clim, aes(y = median.abund, x = cmi.annual.mean)) +
   xlab("CMI annual") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p4 <- ggplot(median.abund.clim, aes(y = median.abund, x = delta.cmi.annual.mean)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -540,7 +606,7 @@ p4 <- ggplot(median.abund.clim, aes(y = median.abund, x = delta.cmi.annual.mean)
   xlab("Delta CMI annual") +
   ylab("Median delta Abund")  +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p5 <- ggplot(median.abund.clim, aes(y = median.abund, x = pr.diff.mean)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -549,7 +615,7 @@ p5 <- ggplot(median.abund.clim, aes(y = median.abund, x = pr.diff.mean)) +
   xlab("Pr diff.") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p6 <- ggplot(median.abund.clim, aes(y = median.abund, x = delta.pr.diff.mean)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -558,7 +624,7 @@ p6 <- ggplot(median.abund.clim, aes(y = median.abund, x = delta.pr.diff.mean)) +
   xlab("Delta pr. diff.") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p7 <- ggplot(median.abund.clim, aes(y = median.abund, x = pr.sum.mean)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -567,7 +633,7 @@ p7 <- ggplot(median.abund.clim, aes(y = median.abund, x = pr.sum.mean)) +
   xlab("Pr. sum") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p8 <- ggplot(median.abund.clim, aes(y = median.abund, x = delta.pr.sum.mean)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -576,17 +642,17 @@ p8 <- ggplot(median.abund.clim, aes(y = median.abund, x = delta.pr.sum.mean)) +
   xlab("Delta pr. sum") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
-climate_bp2 <- p1 + p2 + p3 + p4
-climate_bp2
+climate_plot2 <- p1 + p2 + p3 + p4
+climate_plot2
 
-ggsave(filename = "figures/MedianAbund_Clim2.png", plot = climate_bp2, width = 8, height = 6, dpi = 300)
+# ggsave(filename = "figures/MedianAbund_Clim2.png", plot = climate_bp2, width = 8, height = 6, dpi = 300)
 
-climate_bp3 <- p5 + p6 + p7 + p8
-climate_bp3
+climate_plot3 <- p5 + p6 + p7 + p8
+climate_plot3
 
-ggsave(filename = "figures/MedianAbund_Clim3.png", plot = climate_bp3, width = 8, height = 6, dpi = 300)
+# ggsave(filename = "figures/MedianAbund_Clim3.png", plot = climate_bp3, width = 8, height = 6, dpi = 300)
 
 
 # ---- validation plots ---- 
@@ -596,23 +662,23 @@ p1 <- ggplot(full.min40, aes(y = median.d.abund, x = ACAD.ind, group = ACAD.ind)
   xlab("ACAD pop. trend") +
   ylab("Median delta Abund") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p2 <- ggplot(full.min40, aes(y = median.d.abund, x = sauer.trend)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth()  +
-  # geom_abline() +
+  geom_abline() +
   xlab("Sauer's pop. trend") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 p3 <- ggplot(full.min40, aes(x = ACAD.ind, y = sauer.trend, group = ACAD.ind)) +
   geom_boxplot() +
   ylab("Sauer's pop. trend") +
   xlab("ACAD pop. trend") +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  ylim(-3,5)
+  ylim(-5,3)
 
 validation_plot <- p1 + p2 + p3
 

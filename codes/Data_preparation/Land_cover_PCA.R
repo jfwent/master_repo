@@ -56,11 +56,13 @@ lc.pcs <- tibble(segment = land.use.df$segment,
          delta.PC2 = PC2 - lag(PC2)) %>%
   na.omit()
 
+save(lc.pcs, file = "data/Landuse_PC1_PC2.rda")
+
+# ---- plot results ----
+
 # corrplot(var$cos2, is.corr=FALSE)
 fviz_cos2(lc.pca, choice = "var", axes = 1:2)
 corrplot::corrplot(var$contrib, is.corr=FALSE)
-
-# ---- plot results ----
 
 var_contrib_PC1 <- fviz_contrib(lc.pca, choice = "var", axes = 1, top = 10)
 var_contrib_PC2 <- fviz_contrib(lc.pca, choice = "var", axes = 2)

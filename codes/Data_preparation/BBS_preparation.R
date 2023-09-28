@@ -235,7 +235,7 @@ rm(BBS.stable.absence.t1, BBS.stable.absence.t2, BBS.stable.presence.t1, BBS.sta
 
 rm(BBS.species.all)
 
-save(BBS.stable.full, file = "data/BBS_stable_t1_t2.rda")
+# save(BBS.stable.full, file = "data/BBS_stable_t1_t2.rda")
 
 rm(BBS.stable.t1, BBS.stable.t2)
 
@@ -257,8 +257,7 @@ hfp.df <- hfp.full %>%
   mutate(hfp.mean = ifelse(is.nan(hfp.mean) == T, NA, hfp.mean)); rm(hfp.full)
 
 land.use.df <- hfp.df %>%
-  # filter(year == 2001) %>%
-  left_join(land_use_area, by = c("segment", "year")) %>%
+  left_join(land_use_area, by = c("year","segment")) %>%
   select(-c(ecoregion, tot.area.m2, route)) %>%
   mutate(across(
     .cols = contains("area"),
@@ -267,12 +266,41 @@ land.use.df <- hfp.df %>%
     ,
     .names = "{.col}.{.fn}"
   )) %>%
-  select(year, segment, contains("log"), contains("hfp")); rm(land_use_area, hfp.df)
+  select(year, segment, contains("log"), contains("hfp")); rm(hfp.df)
+
+land.use.df.2 <- land_use_area %>%
+  select(-c(ecoregion, tot.area.m2, route)) %>%
+  mutate(across(
+    .cols = contains("area"),
+    .fns = c(
+      log = \(x) log(x + 900))
+    ,
+    .names = "{.col}.{.fn}"
+  )) %>%
+  select(year, segment, contains("log")); rm(land_use_area)
 
 bioclim.df <- climate.df %>%
-  left_join(land.use.df, by = c("year", "segment")); rm(climate.df, land.use.df)
+  left_join(land.use.df, by = c("year", "segment"))
+
+bioclim.df2 <- climate.df %>%
+  left_join(land.use.df.2, by = c("year", "segment"))
+
+rm(climate.df, land.use.df)
 
 dbioclim <- bioclim.df %>%
+  arrange(segment) %>%
+  group_by(segment) %>%
+  reframe(
+    across(
+      .cols = matches('mean') | matches('log'),
+      # .fns = \(.) lag(.)-.,
+      .fns = ~ ifelse(!is.na(lag(.)), . - lag(.), NA),
+      .names = "delta.{col}"
+    )
+  ) %>%
+  na.omit()
+
+dbioclim2 <- bioclim.df2 %>%
   arrange(segment) %>%
   group_by(segment) %>%
   reframe(
@@ -288,6 +316,8 @@ dbioclim <- bioclim.df %>%
 
 # ---- complete cases
 
+load("data/BBS_stable_t1_t2.rda")
+
 BBS.stable.full.complete <- BBS.stable.full %>%
   left_join(bioclim.df, by = c("year", "segment")) %>%
   na.omit()  %>%
@@ -296,12 +326,20 @@ BBS.stable.full.complete <- BBS.stable.full %>%
 # length(unique(BBS.stable.full.complete$segment)) # 1709 segments
 # length(unique(BBS.stable.full.complete$animal_jetz)) # 279 bird species
 
+BBS.stable.full.complete2 <- BBS.stable.full %>%
+  left_join(bioclim.df2, by = c("year", "segment")) %>%
+  na.omit()  %>%
+  select(-c(abund.mean, abund.median, abund.var))
+
+length(unique(BBS.stable.full.complete2$segment)) # 1890 segments
+length(unique(BBS.stable.full.complete2$animal_jetz)) # 319 bird species
+
 
 # ---- filter out with min number of occurences -----
 
 # --- min number of occurrences is 6
 
-BBS.stable.full.min6 <- BBS.stable.full.complete %>%
+BBS.stable.full.min6 <- BBS.stable.full.complete2 %>%
   group_by(year, animal_jetz) %>%
   mutate(tot_entries = n(),
          tot_occur = sum(abund.geom.mean > 0)) %>%
@@ -312,14 +350,14 @@ BBS.stable.full.min6 <- BBS.stable.full.complete %>%
   filter(n_years != 1) %>%
   select(-c(n_years, tot_entries, tot_occur))
 
-# length(unique(BBS.stable.full.min6$animal_jetz)) # 180 species retained
-# length(unique(BBS.stable.full.min6$segment)) # 1709 segments retained
+# length(unique(BBS.stable.full.min6$animal_jetz)) # 206 species retained
+# length(unique(BBS.stable.full.min6$segment)) # 1890 segments retained
 
 # hist(BBS.stable.full.min6$abund.geom.mean)
 
 # ----- min number of occurrences is 10
 
-BBS.stable.full.min10 <- BBS.stable.full.complete %>%
+BBS.stable.full.min10 <- BBS.stable.full.complete2 %>%
   group_by(year, animal_jetz) %>%
   mutate(tot_entries = n(),
          tot_occur = sum(abund.geom.mean > 0)) %>%
@@ -330,12 +368,12 @@ BBS.stable.full.min10 <- BBS.stable.full.complete %>%
   filter(n_years != 1) %>%
   select(-c(n_years, tot_entries, tot_occur))
 
-# length(unique(BBS.stable.full.min10$animal_jetz)) # 168 species retained
-# length(unique(BBS.stable.full.min10$segment)) # 1709 segments
+# length(unique(BBS.stable.full.min10$animal_jetz)) # 193 species retained
+# length(unique(BBS.stable.full.min10$segment)) # 1890 segments
 
 # ---- min number of occurrences is 40
 
-BBS.stable.full.min40 <- BBS.stable.full.complete %>%
+BBS.stable.full.min40 <- BBS.stable.full.complete2 %>%
   group_by(year, animal_jetz) %>%
   mutate(tot_entries = n(),
          tot_occur = sum(abund.geom.mean > 0)) %>%
@@ -346,10 +384,74 @@ BBS.stable.full.min40 <- BBS.stable.full.complete %>%
   filter(n_years != 1) %>%
   select(-c(n_years, tot_entries, tot_occur))
 
-# length(unique(BBS.stable.full.min40$animal_jetz)) # 101 species retained
+# length(unique(BBS.stable.full.min40$animal_jetz)) # 110 species retained, without hfp
+# length(unique(BBS.stable.full.min40$segment)) # 1890 segments retained
+
+# BBS.stable.full.min40 <- BBS.stable.full.complete %>%
+#   group_by(year, animal_jetz) %>%
+#   mutate(tot_entries = n(),
+#          tot_occur = sum(abund.geom.mean > 0)) %>%
+#   filter(tot_occur >= 40) %>%
+#   ungroup() %>%
+#   group_by(animal_jetz) %>%
+#   mutate(n_years = n_distinct(year)) %>%
+#   filter(n_years != 1) %>%
+#   select(-c(n_years, tot_entries, tot_occur))
+# 
+# length(unique(BBS.stable.full.min40$animal_jetz)) # 101 species retained, with hfp
 # length(unique(BBS.stable.full.min40$segment)) # 1709 segments retained
 
 # ---- delta abundances without double 0's for complete cases ------
+
+d.abund2 <- BBS.stable.full.complete2 %>%
+  arrange(animal_jetz, segment) %>%
+  group_by(animal_jetz, segment) %>%
+  select(year, segment, animal_jetz, abund.geom.mean) %>%
+  mutate(delta.abund = abund.geom.mean - lag(abund.geom.mean)) %>%
+  filter(
+    all(abund.geom.mean !=0),
+    !is.na(delta.abund)) %>%
+  select(-abund.geom.mean) %>%
+  left_join(dbioclim2, by = "segment") %>%
+  na.omit()
+
+length(unique(d.abund2$animal_jetz)) # 244 species, without hfp data
+length(unique(d.abund2$segment)) # 1643 segments
+
+# d.abund <- BBS.stable.full.complete %>%
+#   arrange(animal_jetz, segment) %>%
+#   group_by(animal_jetz, segment) %>%
+#   select(year, segment, animal_jetz, abund.geom.mean) %>%
+#   mutate(delta.abund = abund.geom.mean - lag(abund.geom.mean)) %>%
+#   filter(
+#     all(abund.geom.mean !=0),
+#     !is.na(delta.abund)) %>%
+#   select(-abund.geom.mean) %>%
+#   left_join(dbioclim, by = "segment") %>%
+#   na.omit()
+# 
+# length(unique(d.abund$animal_jetz)) # 213 species, with hfp data
+# length(unique(d.abund$segment)) # 1492 segments
+
+# ---- min 6 entries 
+
+# d.abund.min6 <- BBS.stable.full.complete %>%
+#   arrange(animal_jetz, segment) %>%
+#   group_by(animal_jetz, segment) %>%
+#   select(year, segment, animal_jetz, abund.geom.mean) %>%
+#   mutate(delta.abund = abund.geom.mean - lag(abund.geom.mean)) %>%
+#   filter(all(abund.geom.mean !=0),
+#          !is.na(delta.abund)) %>%
+#   select(-abund.geom.mean) %>%
+#   left_join(dbioclim, by = "segment") %>%
+#   na.omit() %>%
+#   group_by(animal_jetz) %>%
+#   mutate(n_entries = n()) %>%
+#   filter(n_entries >= 6) %>%
+#   select(-n_entries)
+# 
+# length(unique(d.abund.min6$animal_jetz)) # 180 species
+# length(unique(d.abund.min6$segment)) # 1643 segments
 
 d.abund.min6 <- BBS.stable.full.min6 %>%
   arrange(animal_jetz, segment) %>%
@@ -359,11 +461,11 @@ d.abund.min6 <- BBS.stable.full.min6 %>%
   filter(all(abund.geom.mean !=0),
          !is.na(delta.abund)) %>%
   select(-abund.geom.mean) %>%
-  left_join(dbioclim, by = "segment") %>%
+  left_join(dbioclim2, by = "segment") %>%
   na.omit()
 
-# length(unique(d.abund.min6$animal_jetz)) # 179 species
-# length(unique(d.abund.min6$segment)) # 1492 segments
+# length(unique(d.abund.min6$animal_jetz)) # 206 species, without hfp data
+# length(unique(d.abund.min6$segment)) # 1643 segments
 
 # hist(d.abund.min6$d.abund)
 
@@ -381,11 +483,11 @@ d.abund.min10 <- BBS.stable.full.min10 %>%
   filter(all(abund.geom.mean !=0),
          !is.na(delta.abund)) %>%
   select(-abund.geom.mean) %>%
-  left_join(dbioclim, by = "segment") %>%
+  left_join(dbioclim2, by = "segment") %>%
   na.omit()
 
-# length(unique(d.abund.min10$animal_jetz)) # 168 species
-# length(unique(d.abund.min10$segment)) # 1492 segments
+length(unique(d.abund.min10$animal_jetz)) # 193 species, without hfp data
+length(unique(d.abund.min10$segment)) # 1643 segments
 
 d.abund.min40 <- BBS.stable.full.min40 %>%
   arrange(animal_jetz, segment) %>%
@@ -395,16 +497,132 @@ d.abund.min40 <- BBS.stable.full.min40 %>%
   filter(all(abund.geom.mean !=0),
          !is.na(delta.abund)) %>%
   select(-abund.geom.mean) %>%
-  left_join(dbioclim, by = "segment") %>%
+  left_join(dbioclim2, by = "segment") %>%
   na.omit()
 
-# length(unique(d.abund.min40$animal_jetz)) # 101 species
-# length(unique(d.abund.min40$segment)) # 1490 segments
+length(unique(d.abund.min40$animal_jetz)) # 110 species, without hfp data
+length(unique(d.abund.min40$segment)) # 1691 segments
 
-hist(d.abund.min40$delta.abund, breaks = 100)
+# hist(d.abund.min40$delta.abund, breaks = 100)
+
+# ---- minimum number of data points per species ----
+
+
+# ---- min 6 occurrences 
+
+d.abund.min6.min10 <- d.abund.min6 %>%
+  group_by(animal_jetz) %>%
+  mutate(n_entries = n()) %>%
+  filter(n_entries >= 10) %>%
+  select(-n_entries)
+
+length(unique(d.abund.min6.min10$animal_jetz)) # 156 species
+length(unique(d.abund.min6.min10$segment)) # 1643 segments
+
+d.abund.min6.min20 <- d.abund.min6 %>%
+  group_by(animal_jetz) %>%
+  mutate(n_entries = n()) %>%
+  filter(n_entries >= 20) %>%
+  select(-n_entries)
+
+length(unique(d.abund.min6.min20$animal_jetz)) # 111 species
+length(unique(d.abund.min6.min20$segment)) # 1641 segments
+
+d.abund.min6.min30 <- d.abund.min6 %>%
+  group_by(animal_jetz) %>%
+  mutate(n_entries = n()) %>%
+  filter(n_entries >= 30) %>%
+  select(-n_entries)
+
+length(unique(d.abund.min6.min30$animal_jetz)) # 96 species
+length(unique(d.abund.min6.min30$segment)) # 1641 segments
+
+d.abund.min6.min40 <- d.abund.min6 %>%
+  group_by(animal_jetz) %>%
+  mutate(n_entries = n()) %>%
+  filter(n_entries >= 40) %>%
+  select(-n_entries)
+
+length(unique(d.abund.min6.min40$animal_jetz)) # 83 species
+length(unique(d.abund.min6.min40$segment)) # 1637 segments
+
+# ---- min 20 occurrences 
+
+d.abund.min10.min10 <- d.abund.min10 %>%
+  group_by(animal_jetz) %>%
+  mutate(n_entries = n()) %>%
+  filter(n_entries >= 10) %>%
+  select(-n_entries)
+
+length(unique(d.abund.min10.min10$animal_jetz)) # 156 species
+length(unique(d.abund.min10.min10$segment)) # 1643 segments
+
+d.abund.min10.min20 <- d.abund.min10 %>%
+  group_by(animal_jetz) %>%
+  mutate(n_entries = n()) %>%
+  filter(n_entries >= 20) %>%
+  select(-n_entries)
+
+length(unique(d.abund.min10.min20$animal_jetz)) # 111 species
+length(unique(d.abund.min10.min20$segment)) # 1641 segments
+
+d.abund.min10.min30 <- d.abund.min10 %>%
+  group_by(animal_jetz) %>%
+  mutate(n_entries = n()) %>%
+  filter(n_entries >= 30) %>%
+  select(-n_entries)
+
+length(unique(d.abund.min10.min30$animal_jetz)) # 96 species
+length(unique(d.abund.min10.min30$segment)) # 1641 segments
+
+d.abund.min10.min40 <- d.abund.min10 %>%
+  group_by(animal_jetz) %>%
+  mutate(n_entries = n()) %>%
+  filter(n_entries >= 40) %>%
+  select(-n_entries)
+
+length(unique(d.abund.min10.min40$animal_jetz)) # 83 species
+length(unique(d.abund.min10.min40$segment)) # 1637 segments
+
+# ---- min 40 occurrences
+
+d.abund.min40.min10 <- d.abund.min40 %>%
+  group_by(animal_jetz) %>%
+  mutate(n_entries = n()) %>%
+  filter(n_entries >= 10) %>%
+  select(-n_entries)
+
+length(unique(d.abund.min40.min10$animal_jetz)) # 109 species
+length(unique(d.abund.min40.min10$segment)) # 1641 segments
+
+d.abund.min40.min20 <- d.abund.min40 %>%
+  group_by(animal_jetz) %>%
+  mutate(n_entries = n()) %>%
+  filter(n_entries >= 20) %>%
+  select(-n_entries)
+
+length(unique(d.abund.min40.min20$animal_jetz)) # 103 species
+length(unique(d.abund.min40.min20$segment)) # 1641 segments
+
+d.abund.min40.min30 <- d.abund.min40 %>%
+  group_by(animal_jetz) %>%
+  mutate(n_entries = n()) %>%
+  filter(n_entries >= 30) %>%
+  select(-n_entries)
+
+length(unique(d.abund.min40.min30$animal_jetz)) # 96 species
+length(unique(d.abund.min40.min30$segment)) # 1641 segments
+
+d.abund.min40.min40 <- d.abund.min40 %>%
+  group_by(animal_jetz) %>%
+  mutate(n_entries = n()) %>%
+  filter(n_entries >= 40) %>%
+  select(-n_entries)
+
+length(unique(d.abund.min40.min40$animal_jetz)) # 74 species
+length(unique(d.abund.min40.min40$segment)) # 1489 segments
 
 # ---- closer look at the distribution of the delta.abundance per species ----
-
 
 library(ggplot2)
 library(ggridges)
@@ -433,7 +651,10 @@ d.abund.ridges <-
   scale_x_continuous(expand = expansion(mult = 0.1)) +
   xlim(-50, 50) +
   ylab("Bird species") +
-  xlab("Delta abundance")
+  xlab("Delta abundance") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey4")
+
+d.abund.ridges
 
 # ggplot2::ggsave(filename = "figures/D.abund.ridges.png", plot = d.abund.ridges, width = 8, height = 6, dpi = 300)
 
@@ -441,12 +662,12 @@ d.abund.min40 %>%
   group_by(animal_jetz) %>%
   summarize(
     n_obs = n(),
-    n_nulls = sum(between(delta.abund, -1, 1)),
+    n_nulls = sum(between(delta.abund, -0.5, 0.5)),
     null_pct = (n_nulls/n_obs)*100
   ) %>%
   arrange(null_pct) %>%
   filter(n_obs >= 40) %>%
-  print(n=80)
+  print(n=83)
 
 d.abund.min10 %>% 
   group_by(animal_jetz) %>%
@@ -479,6 +700,8 @@ save(BBS.stable.full.min40, file = "data/BBS.full.stable.min40.rda")
 save(d.abund.min6, file = "data/d.abund.min6.rda")
 save(d.abund.min10, file = "data/d.abund.min10.rda")
 save(d.abund.min40, file = "data/d.abund.min40.rda")
+
+
 
 
 # =========== old -----
