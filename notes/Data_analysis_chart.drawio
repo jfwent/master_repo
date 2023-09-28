@@ -1,4 +1,4 @@
-<mxfile host="Electron" modified="2023-09-28T13:53:18.739Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.6.8 Chrome/114.0.5735.289 Electron/25.5.0 Safari/537.36" etag="iPuTJksHHV2dNigMBqj3" version="21.6.8" type="device">
+<mxfile host="Electron" modified="2023-09-28T15:46:35.784Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.6.8 Chrome/114.0.5735.289 Electron/25.5.0 Safari/537.36" etag="nEJjM5f6WdYNsG9DZF1E" version="21.6.8" type="device">
   <diagram id="C5RBs43oDa-KdzZeNtuy" name="Page-1">
     <mxGraphModel dx="1610" dy="617" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
@@ -185,10 +185,10 @@
         <mxCell id="7ExMB92NjcEcXP8VjISY-26" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="WIyWlLk6GJQsqaUBKTNV-1" source="7ExMB92NjcEcXP8VjISY-23" target="7ExMB92NjcEcXP8VjISY-25" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="SgGw7tT4yR4EGLDIBk8X-3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="7ExMB92NjcEcXP8VjISY-23" target="SgGw7tT4yR4EGLDIBk8X-4">
+        <mxCell id="SgGw7tT4yR4EGLDIBk8X-3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="WIyWlLk6GJQsqaUBKTNV-1" source="7ExMB92NjcEcXP8VjISY-23" target="SgGw7tT4yR4EGLDIBk8X-4" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="SgGw7tT4yR4EGLDIBk8X-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="7ExMB92NjcEcXP8VjISY-23" target="SgGw7tT4yR4EGLDIBk8X-2">
+        <mxCell id="SgGw7tT4yR4EGLDIBk8X-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="WIyWlLk6GJQsqaUBKTNV-1" source="7ExMB92NjcEcXP8VjISY-23" target="SgGw7tT4yR4EGLDIBk8X-2" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="7ExMB92NjcEcXP8VjISY-23" value="Filter 5:&lt;br&gt;min number of datapoints" style="rhombus;whiteSpace=wrap;html=1;shadow=0;fontFamily=Helvetica;fontSize=12;align=center;strokeWidth=1;spacing=6;spacingTop=-4;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
@@ -197,16 +197,16 @@
         <mxCell id="7ExMB92NjcEcXP8VjISY-28" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="WIyWlLk6GJQsqaUBKTNV-1" source="7ExMB92NjcEcXP8VjISY-25" target="7ExMB92NjcEcXP8VjISY-27" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="7ExMB92NjcEcXP8VjISY-25" value="x = 6, min 6&lt;br&gt;segments: 1643&lt;br&gt;species: 180&lt;br&gt;&lt;br&gt;x = 10, min 10&lt;br&gt;segments: 1643&lt;br&gt;species: 156&lt;br&gt;&lt;br&gt;x = 40, min40&lt;br&gt;segments: 1489&lt;br&gt;species: 74" style="rounded=1;whiteSpace=wrap;html=1;shadow=0;strokeWidth=1;spacing=6;spacingTop=-4;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+        <mxCell id="7ExMB92NjcEcXP8VjISY-25" value="x = 6, min 6&lt;br&gt;segments: 1643&lt;br&gt;species: 180&lt;br&gt;&lt;br&gt;x = 10, min 10&lt;br&gt;segments: 1643&lt;br&gt;species: 156&lt;br&gt;&lt;br&gt;x = 40, min40&lt;br&gt;segments: 1637&lt;br&gt;species: 83" style="rounded=1;whiteSpace=wrap;html=1;shadow=0;strokeWidth=1;spacing=6;spacingTop=-4;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
           <mxGeometry x="-370" y="1677.5" width="220" height="175" as="geometry" />
         </mxCell>
         <mxCell id="7ExMB92NjcEcXP8VjISY-27" value="x = 6 &lt;br&gt;percentage of d.abund/species in&lt;br&gt;range -0.5 to 0.5: 0-61%&lt;br&gt;range -1 to 1: 0-83%&lt;br&gt;&lt;br&gt;x = 10&lt;br&gt;percentage of d.abund/species in&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;range -0.5 to 0.5: 0-61%&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;range -1 to 1: 0-79%&lt;br&gt;&lt;br&gt;x = 40&lt;br&gt;percentage of d.abund/species in&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;range -0.5 to 0.5: 3-36%&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;range -1 to 1: 6-58%" style="rounded=1;whiteSpace=wrap;html=1;shadow=0;strokeWidth=1;spacing=6;spacingTop=-4;align=left;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
           <mxGeometry x="-710" y="1638.75" width="220" height="252.5" as="geometry" />
         </mxCell>
-        <mxCell id="SgGw7tT4yR4EGLDIBk8X-2" value="min 40 occurrences&lt;br&gt;&lt;br&gt;min 10 delta data points&lt;br&gt;segments: 1641&lt;br&gt;species: 109&lt;br&gt;&lt;br&gt;min 20 delta data points&lt;br&gt;segments: 1641&lt;br&gt;species: 103&lt;br&gt;&lt;br&gt;min 30 delta data points:&lt;br&gt;segments: 1641&lt;br&gt;species: 96&lt;br&gt;&lt;br&gt;min 40 delta data points&lt;br&gt;segments: 1489&lt;br&gt;species: 74" style="rounded=1;whiteSpace=wrap;html=1;shadow=0;strokeWidth=1;spacing=6;spacingTop=-4;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+        <mxCell id="SgGw7tT4yR4EGLDIBk8X-2" value="min 40 occurrences&lt;br&gt;&lt;br&gt;min 10 delta data points&lt;br&gt;segments: 1641&lt;br&gt;species: 109&lt;br&gt;&lt;br&gt;min 20 delta data points&lt;br&gt;segments: 1641&lt;br&gt;species: 103&lt;br&gt;&lt;br&gt;min 30 delta data points:&lt;br&gt;segments: 1641&lt;br&gt;species: 96&lt;br&gt;&lt;br&gt;min 40 delta data points&lt;br&gt;segments: 1637&lt;br&gt;species: 83" style="rounded=1;whiteSpace=wrap;html=1;shadow=0;strokeWidth=1;spacing=6;spacingTop=-4;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
           <mxGeometry x="-340" y="1960" width="290" height="290" as="geometry" />
         </mxCell>
-        <mxCell id="SgGw7tT4yR4EGLDIBk8X-4" value="min 6 or min 10 occurrences&lt;br&gt;&lt;br&gt;min 10 delta data points&lt;br&gt;segments: 1643&lt;br&gt;species: 156&lt;br&gt;&lt;br&gt;min 20 delta data points&lt;br&gt;segments: 1641&lt;br&gt;species: 111&lt;br&gt;&lt;br&gt;min 30 delta data points:&lt;br&gt;segments: 1641&lt;br&gt;species: 96&lt;br&gt;&lt;br&gt;min 40 delta data points&lt;br&gt;segments: 1637&lt;br&gt;species: 83" style="rounded=1;whiteSpace=wrap;html=1;shadow=0;strokeWidth=1;spacing=6;spacingTop=-4;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+        <mxCell id="SgGw7tT4yR4EGLDIBk8X-4" value="min 6 or min 10 occurrences&lt;br&gt;&lt;br&gt;min 10 delta data points&lt;br&gt;segments: 1643&lt;br&gt;species: 156&lt;br&gt;&lt;br&gt;min 20 delta data points&lt;br&gt;segments: 1641&lt;br&gt;species: 111&lt;br&gt;&lt;br&gt;min 30 delta data points:&lt;br&gt;segments: 1641&lt;br&gt;species: 96&lt;br&gt;&lt;br&gt;min 40 delta data points&lt;br&gt;segments: 1637&lt;br&gt;species: 83" style="rounded=1;whiteSpace=wrap;html=1;shadow=0;strokeWidth=1;spacing=6;spacingTop=-4;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
           <mxGeometry x="-10" y="1960" width="290" height="290" as="geometry" />
         </mxCell>
       </root>

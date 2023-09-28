@@ -294,7 +294,7 @@ ggsave(filename = "figures/paired_var_imp_ratio_RF.png", plot = paired_barplot, 
   
   
 # --- RF model approach similar to Howard et al., 2023 ----
-# The authors build SDMs 
+# The authors build SDMs
 
 
 # ---- library ----
@@ -400,3 +400,113 @@ res_tib <- tibble(bird = birds,
                   best_mtry = best_mtry,
                   best_nt = best_nt,
                   best_rmse = best_rmse)
+
+
+# ---- new try ----
+
+library(caret)
+library(randomForest)
+
+
+# Define the number of blocks per species
+num_blocks_per_species <- 10
+
+# Initialize a list to store the blocks
+blocks_to_omit <- list()
+
+# Group the data by 'species'
+species_groups <- BBS_bioclim_t1 %>% group_by(animal_jetz)
+
+# Create 10 blocks for each species
+for (species_group in unique(BBS_bioclim_t1$animal_jetz)) {
+  group_data <- filter(species_groups, animal_jetz == species_group)
+  
+  # Create block indices
+  block_indices <- split(sample(1:nrow(group_data)), 1:num_blocks_per_species)
+  
+  # Create blocks for the current species
+  blocks <- lapply(block_indices, function(indices) group_data[indices, ])
+  
+  # Append the blocks to the list
+  blocks_to_omit[[as.character(species_group)]] <- blocks
+}
+
+
+# Define control parameters for Random Forest
+rf_control <- trainControl(
+  method = "none",  # Turn off resampling for this procedure
+  verboseIter = TRUE
+)
+
+# Define a grid of mtry values to try
+mtry_grid <- expand.grid(mtry = 1:3)
+
+# Initialize the number of trees
+nt <- 1000  # Initial number of trees
+
+num_blocks <- 10  # Number of blocks in your data
+best_mtry <- NULL  # Initialize the best mtry
+best_nt <- NULL    # Initialize the best number of trees
+best_adj_r2 <- -Inf  # Initialize the best adjusted R-squared
+
+for (block_to_omit in 1:num_blocks) {
+  # Create a subset of your data, omitting the block_to_omit
+  subset_data <- your_data[your_data$block_column != block_to_omit, ]
+  
+  # Initialize a flag to check for improvement in adjusted R-squared
+  improvement_threshold <- 0.01  # 1% improvement threshold
+  improvement <- TRUE
+  
+  while (improvement) {
+    # Define the formula
+    # formula <- abund.geom.mean ~ predictor1 + predictor2 + ...
+    
+    # Train the Random Forest model for the current mtry and nt values
+    rf_model <- train(
+      abund.geom.mean ~.,
+      data = subset_data,
+      method = "rf",         # Specify Random Forest as the method
+      trControl = rf_control,  # Use the control parameters defined earlier
+      tuneGrid = data.frame(mtry = best_mtry, ntree = nt)
+    )
+    
+    # Calculate adjusted R-squared
+    adj_r2 <- summary(rf_model$finalModel)$adj.r.squared
+    
+    # Check for improvement in adjusted R-squared
+    improvement <- adj_r2 - best_adj_r2 > improvement_threshold
+    
+    if (improvement) {
+      # Update the best values
+      best_mtry <- rf_model$bestTune$mtry
+      best_nt <- nt
+      best_adj_r2 <- adj_r2
+      
+      # Add 500 trees to the model
+      nt <- nt + 500
+    }
+  }
+  
+  # Print or store any relevant information about the best model and iteration
+  print(paste("Iteration", block_to_omit, "- mtry:", best_mtry, "- nt:", best_nt, "- Adj.R-squared:", best_adj_r2))
+}
+
+
+final_rf_models <- list()
+
+for (block_to_omit in 1:num_blocks) {
+  # Create a subset of your data, omitting the block_to_omit
+  subset_data <- your_data[your_data$block_column != block_to_omit, ]
+  
+  # Train the Random Forest model with the best mtry and nt values
+  final_rf_model <- train(
+    formula,
+    data = subset_data,
+    method = "rf",  # Specify Random Forest as the method
+    trControl = rf_control,
+    tuneGrid = data.frame(mtry = best_mtry, ntree = best_nt)
+  )
+  
+  # Store the final RF model
+  final_rf_models[[block_to_omit]] <- final_rf_model
+}

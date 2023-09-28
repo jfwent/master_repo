@@ -87,7 +87,6 @@ lc.df <- lc.t1 %>% left_join(dlc, by = "segment")%>%
 
 rm(dlc, land_use_area, lc.t1)
 
-
 # ---- climate data ----
 
 load("data/Climate/climate_df.rda")
@@ -441,21 +440,26 @@ p7 <- ggplot(median.abund.lc, aes(y = median.abund, x = PC2)) +
   geom_smooth()+
   # geom_abline() +
   xlab("PC2") +
-  ylab("") +
+  ylab("Median delta Abund") +
   geom_hline(yintercept = 0, linetype = "dashed") +
   ylim(-5,3)
 
 land_cover_plot <- p1 + p2 + p3 + p4 + p5 + p6 + p7
 land_cover_plot
 
-p1 <- ggplot(median.abund.lc, aes(y = median.abund, x = log(abs(delta.forest.area.m2.log)))) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth() +
+ggsave(filename = "figures/MedianAbund_Landcover.png", plot = land_cover_plot, width = 8, height = 6, dpi = 300)
+
+p1 <- ggplot(median.abund.lc, aes(y = median.abund, x = delta.forest.area.m2.log)) +
+  # geom_point(size = 2, alpha = 0.5) +
+  # geom_smooth() +
   # geom_abline() +
+  # geom_hex(bins = 50) +
   ylab("Median delta Abund") +
   xlab("log(abs(delta Forest area))")  +
   geom_hline(yintercept = 0, linetype = "dashed") +
   ylim(-5,3)
+
+p1
 
 p2 <- ggplot(median.abund.lc, aes(y = median.abund, x = delta.crop.area.m2.log)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -571,7 +575,7 @@ p6 <- ggplot(median.abund.clim, aes(y = median.abund, x = delta.swb.mean)) +
 climate_plot1 <- p1 + p2 + p3 + p4 + p5 + p6
 climate_plot1
 
-# ggsave(filename = "figures/MedianAbund_Clim1.png", plot = climate_bp1, width = 8, height = 6, dpi = 300)
+ggsave(filename = "figures/MedianAbund_Clim1.png", plot = climate_plot1, width = 8, height = 6, dpi = 300)
 
 p1 <- ggplot(median.abund.clim, aes(y = median.abund, x = cmi.diff.mean)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -647,12 +651,12 @@ p8 <- ggplot(median.abund.clim, aes(y = median.abund, x = delta.pr.sum.mean)) +
 climate_plot2 <- p1 + p2 + p3 + p4
 climate_plot2
 
-# ggsave(filename = "figures/MedianAbund_Clim2.png", plot = climate_bp2, width = 8, height = 6, dpi = 300)
+ggsave(filename = "figures/MedianAbund_Clim2.png", plot = climate_plot2, width = 8, height = 6, dpi = 300)
 
 climate_plot3 <- p5 + p6 + p7 + p8
 climate_plot3
 
-# ggsave(filename = "figures/MedianAbund_Clim3.png", plot = climate_bp3, width = 8, height = 6, dpi = 300)
+ggsave(filename = "figures/MedianAbund_Clim3.png", plot = climate_plot3, width = 8, height = 6, dpi = 300)
 
 
 # ---- validation plots ---- 
