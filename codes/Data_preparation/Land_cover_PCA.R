@@ -36,7 +36,7 @@ rm(land_use_area, hfp.df)
 
 # ----- PCA ----
 
-lc.pca <- dudi.pca(land.use.df[,4:12],
+lc.pca <- ade4::dudi.pca(land.use.df[,4:12],
                    scannf = F,
                    nf = 9)
 
@@ -53,8 +53,8 @@ lc.pcs <- tibble(segment = land.use.df$segment,
   group_by(segment) %>%
   arrange(segment) %>%
   mutate(delta.PC1 = PC1 - lag(PC1),
-         delta.PC2 = PC2 - lag(PC2)) %>%
-  na.omit()
+         delta.PC2 = PC2 - lag(PC2)) #%>%
+  # na.omit()
 
 save(lc.pcs, file = "data/Landuse_PC1_PC2.rda")
 

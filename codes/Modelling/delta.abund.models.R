@@ -91,35 +91,22 @@ abund.min40 <- d.abund.min40 %>%
 
 # ---- LM function -----
 
-fit_lm <- function(df, vars) {
-  formula_string <- paste("delta.abund ~", paste(vars, collapse = " + "))
-  formula <- as.formula(formula_string)
-  # formula <- as.formula(paste(formula_string, "+", paste("I(", vars, "^2)", collapse = " + ")))
-  model <- lm(formula, data = df)
-  return(model)
-}
-
 birds <- unique(abund.min40$animal_jetz)
 vars.all <- colnames(abund.min40[4:19])
 
 clim_vars <- colnames(abund.min40[4:11])
 lc_vars <- colnames(abund.min40[12:19])
 
-# formula_string <- paste("delta.abund ~", paste(vars, collapse = " + "))
-# formula_string <- as.formula(paste(formula_string, "+", paste("I(", vars, "^2)", collapse = " + ")))
-# lm_formula <- formula(formula_string)
-
-num_folds <- 10
-
-LM_list <- list()
-
-rmse_tib <- tibble(bird = character(),
-                    mean_rmse = numeric(),
-                    n.folds = numeric())
-
 adj_r2_tib <- tibble(bird = character(),
-                  adj.r2 = numeric())
-  
+                     adj.r2 = numeric())
+
+var.imp.tib <- tibble(bird = character(),
+                      var.imp.ratio = numeric(),
+                      variables = character(),
+                      var.imps = numeric())
+
+full_mods <- list()
+
 for(bird.ind in birds){
   
   print(paste0("working on ", which(birds == bird.ind), "/", length(birds), " ..."))
@@ -128,66 +115,81 @@ for(bird.ind in birds){
     filter(animal_jetz == bird.ind) %>%
     tibble::rowid_to_column(., "ID")
   
-  full.mod <- fit_lm(bird.tmp, vars = vars.all)
-  adj.r2.now <- summary(full.mod)$adj.r.squared
+  all.predictors <- vars.all
+  lc.predictors <- lc_vars
+  clim.predictors <- clim_vars
+  response <- "delta.abund"
   
-  lc.mod <- fit_lm(bird.tmp, vars = lc_vars)
-  adj.r2.lc <- summary(lc.mod)$adj.r.squared
+  all.bird_data <- bird.tmp[, c(all.predictors, response)]
   
-  clim.mod <- fit_lm(bird.tmp, vars = clim_vars)
-  adj.r2.clim <- summary(clim.mod)$adj.r.squared
+  lc.bird_data <- bird.tmp[, c(lc.predictors, response)]
   
-  residuals.now <- adj.r2.now - (adj.r2.clim + adj.r2.lc)
+  clim.bird_data <- bird.tmp[, c(clim.predictors, response)]
+  
+  train_control <- caret::trainControl(method = "cv", number = 10)
+  
+  full.lm_model <- caret::train(
+    delta.abund~.,
+    data = all.bird_data,
+    method = "lm",
+    trControl = train_control
+  )
+  
+  adj.r2.full <- summary(full.lm_model$finalModel)$r.squared
+  
+  lc.lm_model <- caret::train(
+    delta.abund~.,
+    data = lc.bird_data,
+    method = "lm",
+    trControl = train_control
+  )
+  
+  adj.r2.lc <- summary(lc.lm_model$finalModel)$r.squared
+  
+  clim.lm_model <- caret::train(
+    delta.abund~.,
+    data = clim.bird_data,
+    method = "lm",
+    trControl = train_control
+  )
+  
+  adj.r2.clim <- summary(clim.lm_model$finalModel)$r.squared
+  
+  residuals.now <- adj.r2.full - (adj.r2.clim + adj.r2.lc)
   
   new_row1 <- tibble(bird = bird.ind,
-                     adj.r2 = adj.r2.now,
+                     adj.r2 = adj.r2.full,
                      adj.r2_clim = adj.r2.clim,
                      adj.r2_lc = adj.r2.lc,
                      residuals = residuals.now)
+  
   adj_r2_tib <- bind_rows(adj_r2_tib, new_row1)
   
-  LM_list[[bird.ind]] <- full.mod
+  full_mods[[bird.ind]] <- full.lm_model
   
-  folds <- caret::groupKFold(bird.tmp$segment, k = 10)
+  varImp.full <- caret::varImp(full.lm_model)$importance
   
-  rmse_values <- numeric(num_folds)
+  var.imp.adj <- varImp.full/sum(varImp.full)
   
-  for(n_fold in seq_along(folds)){
-    
-    bird.train <- bird.tmp %>%
-      filter(ID %in% folds[[n_fold]])
-    
-    bird.test <- bird.tmp %>%
-      filter(!(ID %in% folds[[n_fold]]))
-    
-    bird_model <- fit_lm(bird.train, vars = vars.all)
-    
-    predicted_values <- predict(bird_model, newdata = bird.test)
-    
-    rmse <- sqrt(mean((bird.train$delta.abund - predicted_values)^2))
-    
-    rmse_values[n_fold] <- rmse
-  }
+  clim.imp <- sum(var.imp.adj[1:8,])
   
-  mean_rmse <- mean(rmse_values)
+  lc.imp <- sum(var.imp.adj[9:12,])
   
+  var.imp.ratio <- clim.imp/lc.imp
   
+  new_entry_var.imp <- tibble(bird = bird.ind,
+                              var.imp.ratio = var.imp.ratio,
+                              variables = rownames(var.imp.adj),
+                              var.imps = var.imp.adj[,1])
   
-  new_row2 <- tibble(bird = bird.ind, mean_rmse = mean_rmse,
-                     n.folds = length(folds))
-  
-  
-  rmse_tib <- bind_rows(rmse_tib, new_row2)
+  var.imp.tib <- bind_rows(var.imp.tib, new_entry_var.imp)
 }
-
-summary(LM_list[[1]])
 
 rm(bird_model, bird.test, bird.train, bird.tmp, clim.df,
    clim.mod, folds, full.mod, lc.df, lc.mod, new_row1, new_row2,
    adj.r2.clim, adj.r2.lc, adj.r2.now, bird.ind, clim_vars, lc_vars, lm_formula,
    mean_rmse, n_fold, num_folds, predicted_values, residuals.now, rmse, rmse_values, vars, vars.all)
 
-# adj_r2_tib_traits <- adj_r2_tib_traits %>% filter(bird != "Empidonax_traillii")
 
 # ---- plot residuals with species traits ----
 
@@ -639,6 +641,91 @@ boxplot <- p1 + p2 + p3 + p4
 boxplot
 
 # ========== Old ----
+# ---- LM function ----
+# formula_string <- paste("delta.abund ~", paste(vars, collapse = " + "))
+# formula_string <- as.formula(paste(formula_string, "+", paste("I(", vars, "^2)", collapse = " + ")))
+# lm_formula <- formula(formula_string)
+
+fit_lm <- function(df, vars) {
+  formula_string <- paste("delta.abund ~", paste(vars, collapse = " + "))
+  formula <- as.formula(formula_string)
+  # formula <- as.formula(paste(formula_string, "+", paste("I(", vars, "^2)", collapse = " + ")))
+  model <- lm(formula, data = df)
+  return(model)
+}
+
+num_folds <- 10
+
+LM_list <- list()
+
+rmse_tib <- tibble(bird = character(),
+                   mean_rmse = numeric(),
+                   n.folds = numeric())
+
+adj_r2_tib <- tibble(bird = character(),
+                     adj.r2 = numeric())
+
+for(bird.ind in birds){
+  
+  print(paste0("working on ", which(birds == bird.ind), "/", length(birds), " ..."))
+  
+  bird.tmp <- abund.min40 %>%
+    filter(animal_jetz == bird.ind) %>%
+    tibble::rowid_to_column(., "ID")
+  
+  full.mod <- fit_lm(bird.tmp, vars = vars.all)
+  adj.r2.now <- summary(full.mod)$adj.r.squared
+  
+  lc.mod <- fit_lm(bird.tmp, vars = lc_vars)
+  adj.r2.lc <- summary(lc.mod)$adj.r.squared
+  
+  clim.mod <- fit_lm(bird.tmp, vars = clim_vars)
+  adj.r2.clim <- summary(clim.mod)$adj.r.squared
+  
+  residuals.now <- adj.r2.now - (adj.r2.clim + adj.r2.lc)
+  
+  new_row1 <- tibble(bird = bird.ind,
+                     adj.r2 = adj.r2.now,
+                     adj.r2_clim = adj.r2.clim,
+                     adj.r2_lc = adj.r2.lc,
+                     residuals = residuals.now)
+  adj_r2_tib <- bind_rows(adj_r2_tib, new_row1)
+  
+  LM_list[[bird.ind]] <- full.mod
+  
+  folds <- caret::groupKFold(bird.tmp$segment, k = 10)
+  
+  rmse_values <- numeric(num_folds)
+  
+  for(n_fold in seq_along(folds)){
+    
+    bird.train <- bird.tmp %>%
+      filter(ID %in% folds[[n_fold]])
+    
+    bird.test <- bird.tmp %>%
+      filter(!(ID %in% folds[[n_fold]]))
+    
+    bird_model <- fit_lm(bird.train, vars = vars.all)
+    
+    predicted_values <- predict(bird_model, newdata = bird.test)
+    
+    rmse <- sqrt(mean((bird.train$delta.abund - predicted_values)^2))
+    
+    rmse_values[n_fold] <- rmse
+  }
+  
+  mean_rmse <- mean(rmse_values)
+  
+  
+  
+  new_row2 <- tibble(bird = bird.ind, mean_rmse = mean_rmse,
+                     n.folds = length(folds))
+  
+  
+  rmse_tib <- bind_rows(rmse_tib, new_row2)
+}
+
+summary(LM_list[[1]])
 # ---- prepare the bioclim data ---- 
 
 climate.df <- climate_df %>%
