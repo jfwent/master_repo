@@ -6,112 +6,32 @@
 library(tidyverse)
 library(patchwork)
 library(ggplot2)
+install.packages("aov")
 
-# ---- load data ----
-
-load("data/d.abund.min6.rda")
-load("data/d.abund.min10.rda")
-load("data/d.abund.min40.rda")
-
-load("data/Climate/climate_df.rda")
-load("data/Land_use/land_use_area_t1_t2.rda")
-load("data/Landuse_PC1_PC2.rda")
-
-# ---- bioclim data ----
-
-climate.df <- climate_df %>%
-  # filter(year == 2001) %>%
-  select(-c(contains("var"), contains("median")), contains("mean"),
-         -c(pr.sum.mean, cmi.annual.mean, pr.diff.mean))
-
-clim.t1 <- climate.df %>% filter(year == 2001) %>% select(-year)
-
-dclim <- climate.df %>%
-  arrange(segment) %>%
-  group_by(segment) %>%
-  mutate(
-    across(
-      .cols = matches('mean') | matches('log'),
-      # .fns = \(.) lag(.)-.,
-      .fns = ~ ifelse(!is.na(lag(.)), . - lag(.), NA),
-      .names = "delta.{col}"
-    )
-  ) %>%
-  select(segment, contains("delta")) %>%
-  na.omit()
-
-clim.df <- clim.t1 %>% left_join(dclim, by = "segment"); rm(climate_df, climate.df, clim.t1, dclim)
-
-lc.df <- land_use_area %>%
-  select(-c(ecoregion, tot.area.m2, route, barren.area.m2, wet.area.m2)) %>%
-  mutate(urban.area.m2 = urban.high.area.m2 + urban.low.area.m2,
-         all.grass.area.m2 = grass.area.m2 + pasture.area.m2) %>%
-  select(-c(urban.high.area.m2, urban.low.area.m2, grass.area.m2,
-            pasture.area.m2)) %>%
-  mutate(across(
-    .cols = contains("area"),
-    .fns = c(
-      log = \(x) log(x + 900))
-    ,
-    .names = "{.col}.{.fn}"
-  )) %>%
-  select(year, segment, contains("log"))
-
-lc.t1 <- lc.df %>% filter(year == 2001) %>% select(-year)
-
-dlc <- lc.df %>%
-  arrange(segment) %>%
-  group_by(segment) %>%
-  mutate(
-    across(
-      .cols = matches('area') | matches('log'),
-      # .fns = \(.) lag(.)-.,
-      .fns = ~ ifelse(!is.na(lag(.)), . - lag(.), NA),
-      .names = "delta.{col}"
-    )
-  ) %>%
-  select(segment, contains("delta")) %>%
-  na.omit()
-
-lc.df <- lc.t1 %>% left_join(dlc, by = "segment")
-
-rm(dlc, land_use_area, lc.t1)
-
-# ---- full data set ----
-
-abund.min40 <- d.abund.min40 %>%
-  select(segment, animal_jetz, delta.abund) %>%
-  left_join(clim.df, by = "segment") %>%
-  left_join(lc.df, by = "segment") %>%
-  na.omit() %>%
-  group_by(animal_jetz) %>%
-  mutate(n_entries = n()) %>%
-  filter(n_entries >= 40) %>%
-  select(-n_entries)
-
+# ==== with land cover vars -----
 # ---- LM function -----
 
-birds <- unique(abund.min40$animal_jetz)
-vars.all <- colnames(abund.min40[4:19])
+birds <- unique(abund.min40.lc$animal_jetz)
+vars.all <- colnames(abund.min40.lc[4:19])
 
-clim_vars <- colnames(abund.min40[4:11])
-lc_vars <- colnames(abund.min40[12:19])
+clim_vars <- colnames(abund.min40.lc[4:11])
+lc_vars <- colnames(abund.min40.lc[12:19])
 
-adj_r2_tib <- tibble(bird = character(),
+adj_r2_lc <- tibble(bird = character(),
                      adj.r2 = numeric())
 
-var.imp.tib <- tibble(bird = character(),
+var.imp.lc <- tibble(bird = character(),
                       var.imp.ratio = numeric(),
                       variables = character(),
                       var.imps = numeric())
 
-full_mods <- list()
+full_mods.lc <- list()
 
 for(bird.ind in birds){
   
   print(paste0("working on ", which(birds == bird.ind), "/", length(birds), " ..."))
   
-  bird.tmp <- abund.min40 %>%
+  bird.tmp <- abund.min40.lc %>%
     filter(animal_jetz == bird.ind) %>%
     tibble::rowid_to_column(., "ID")
   
@@ -128,32 +48,47 @@ for(bird.ind in birds){
   
   train_control <- caret::trainControl(method = "cv", number = 10)
   
-  full.lm_model <- caret::train(
-    delta.abund~.,
-    data = all.bird_data,
-    method = "lm",
-    trControl = train_control
+  tryCatch({
+    full.lm_model <- caret::train(
+      delta.abund~.,
+      data = all.bird_data,
+      method = "lm",
+      trControl = train_control
+    )
+    
+    adj.r2.full <- summary(full.lm_model$finalModel)$r.squared
+  }, warning = function(w){
+    cat("Warning encountered for bird", bird.ind, "during full model training:", conditionMessage(w), "\n")
+  }
   )
   
-  adj.r2.full <- summary(full.lm_model$finalModel)$r.squared
-  
-  lc.lm_model <- caret::train(
-    delta.abund~.,
-    data = lc.bird_data,
-    method = "lm",
-    trControl = train_control
+  tryCatch({
+    lc.lm_model <- caret::train(
+      delta.abund~.,
+      data = lc.bird_data,
+      method = "lm",
+      trControl = train_control
+    )
+    
+    adj.r2.lc <- summary(lc.lm_model$finalModel)$r.squared
+  }, warning = function(w){
+    cat("Warning encountered for bird", bird.ind, "during land cover model training:", conditionMessage(w), "\n")
+  }
   )
   
-  adj.r2.lc <- summary(lc.lm_model$finalModel)$r.squared
-  
-  clim.lm_model <- caret::train(
-    delta.abund~.,
-    data = clim.bird_data,
-    method = "lm",
-    trControl = train_control
+  tryCatch({
+    clim.lm_model <- caret::train(
+      delta.abund~.,
+      data = clim.bird_data,
+      method = "lm",
+      trControl = train_control
+    )
+    
+    adj.r2.clim <- summary(clim.lm_model$finalModel)$r.squared
+  }, warning = function(w){
+    cat("Warning encountered for bird", bird.ind, "during climate model training:", conditionMessage(w), "\n")
+  }
   )
-  
-  adj.r2.clim <- summary(clim.lm_model$finalModel)$r.squared
   
   residuals.now <- adj.r2.full - (adj.r2.clim + adj.r2.lc)
   
@@ -163,9 +98,9 @@ for(bird.ind in birds){
                      adj.r2_lc = adj.r2.lc,
                      residuals = residuals.now)
   
-  adj_r2_tib <- bind_rows(adj_r2_tib, new_row1)
+  adj_r2_lc <- bind_rows(adj_r2_lc, new_row1)
   
-  full_mods[[bird.ind]] <- full.lm_model
+  full_mods.lc[[bird.ind]] <- full.lm_model
   
   varImp.full <- caret::varImp(full.lm_model)$importance
   
@@ -182,29 +117,46 @@ for(bird.ind in birds){
                               variables = rownames(var.imp.adj),
                               var.imps = var.imp.adj[,1])
   
-  var.imp.tib <- bind_rows(var.imp.tib, new_entry_var.imp)
+  var.imp.lc <- bind_rows(var.imp.lc, new_entry_var.imp)
 }
 
-rm(bird_model, bird.test, bird.train, bird.tmp, clim.df,
-   clim.mod, folds, full.mod, lc.df, lc.mod, new_row1, new_row2,
-   adj.r2.clim, adj.r2.lc, adj.r2.now, bird.ind, clim_vars, lc_vars, lm_formula,
-   mean_rmse, n_fold, num_folds, predicted_values, residuals.now, rmse, rmse_values, vars, vars.all)
+rm(all.bird_data, bird.tmp, clim.bird_data, clim.lm_model, full.lm_model, lc.bird_data,
+   lc.lm_model, new_entry_var.imp, new_row1, train_control, var.imp.adj, varImp.full,
+   adj.r2.clim, adj.r2.full, adj.r2.lc, all.predictors, bird.ind, birds, clim_vars, clim.imp, clim.predictors,
+   lc_vars, lc.imp, lc.predictors, residuals.now, response, var.imp.ratio, vars.all)
 
+# wrning_birds <- c("Catharus_guttatus", "Catharus_ustulatus",
+#                   "Dendroica_coronata", "Dendroica_virens", "Junco_hyemalis",
+#                   "Myiarchus_cinerascens", "Piranga_ludoviciana", "Zonotrichia_albicollis")
+# 
+# t <- abund.min40.lc %>%
+#   filter(animal_jetz %in% wrning_birds) %>%
+#   group_by(animal_jetz) %>%
+#   mutate(n_entries = n())
+# 
+# unique(t$n_entries)
 
-# ---- plot residuals with species traits ----
+# ---- species traits data ----
 
 load("data/species_traits.rda")
 
-species.traits <- species.traits %>% rename(bird =  animal_jetz)
+species.traits <- species.traits %>%
+  rename(bird =  animal_jetz) %>%
+  select(-c(Common.Name, tot_diet_div, shannon, Clutch))
 
-adj_r2_tib_traits <- adj_r2_tib %>% left_join(species.traits, by = "bird") %>%
+traits <- colnames(species.traits[2:14])
+
+adj_r2_lc_traits <- adj_r2_lc %>% left_join(species.traits, by = "bird") %>%
+  left_join(var.imp.lc, by = "bird") %>%
   mutate(na.num = rowSums(is.na(.))) %>%
   filter(na.num != 17) %>%
-  select(-na.num)
+  select(-na.num) %>%
+  select(-variables, -var.imps) %>%
+  distinct()
 
 # ---- continuous traits plots ----
 
-p1 <- ggplot(adj_r2_tib_traits, aes(y = residuals, x = log(GenLength))) +
+p1 <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = log(GenLength))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth() +
   # geom_abline() +
@@ -213,7 +165,7 @@ p1 <- ggplot(adj_r2_tib_traits, aes(y = residuals, x = log(GenLength))) +
   geom_hline(yintercept = 0, linetype = "dashed") #+
   # ylim(-0.1,0.1)
 
-p2 <- ggplot(adj_r2_tib_traits, aes(y = residuals, x = Clutch.Bird)) +
+p2 <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = Clutch.Bird)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth()+
   # geom_abline() +
@@ -222,7 +174,7 @@ p2 <- ggplot(adj_r2_tib_traits, aes(y = residuals, x = Clutch.Bird)) +
   geom_hline(yintercept = 0, linetype = "dashed") #+
   # ylim(-0.1,0.1)
 
-p3 <- ggplot(adj_r2_tib_traits, aes(y = residuals, x = diet.breadth)) +
+p3 <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = diet.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth() +
   # geom_abline() +
@@ -231,7 +183,7 @@ p3 <- ggplot(adj_r2_tib_traits, aes(y = residuals, x = diet.breadth)) +
   geom_hline(yintercept = 0, linetype = "dashed") #+
   # ylim(-0.1,0.1)
 
-p4 <- ggplot(adj_r2_tib_traits, aes(y = residuals, x = hab.breadth)) +
+p4 <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = hab.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth()+
   # geom_abline() +
@@ -240,7 +192,7 @@ p4 <- ggplot(adj_r2_tib_traits, aes(y = residuals, x = hab.breadth)) +
   geom_hline(yintercept = 0, linetype = "dashed") #+
   # ylim(-0.1,0.1)
 
-p5 <- ggplot(adj_r2_tib_traits, aes(y = residuals, x = log(body.mass))) +
+p5 <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = log(body.mass))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth()+
   # geom_abline() +
@@ -249,7 +201,7 @@ p5 <- ggplot(adj_r2_tib_traits, aes(y = residuals, x = log(body.mass))) +
   geom_hline(yintercept = 0, linetype = "dashed") #+
   # ylim(-0.1,0.1)
 
-p6 <- ggplot(adj_r2_tib_traits, aes(y = residuals, x = hand.wing.ind)) +
+p6 <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = hand.wing.ind)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth() +
   # geom_abline() +
@@ -258,7 +210,7 @@ p6 <- ggplot(adj_r2_tib_traits, aes(y = residuals, x = hand.wing.ind)) +
   geom_hline(yintercept = 0, linetype = "dashed") #+
   # ylim(-0.1, 0.1)
 
-p7 <- ggplot(adj_r2_tib_traits, aes(y = residuals, x = rel_brain_size)) +
+p7 <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = rel_brain_size)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth() +
   xlab("Relative brain size") +
@@ -272,7 +224,7 @@ final_plot
 
 # ---- categorical traits ----
 
-p1 <- ggplot(adj_r2_tib_traits, aes(y = residuals, x = log(tot.innov), group = tot.innov)) +
+p1_bp <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = log(tot.innov), group = tot.innov)) +
   geom_boxplot() +
   # geom_violin() +
   ylab("Residuals") +
@@ -280,7 +232,7 @@ p1 <- ggplot(adj_r2_tib_traits, aes(y = residuals, x = log(tot.innov), group = t
   geom_hline(yintercept = 0, linetype = "dashed") #+
   # ylim(-3,5)
 
-p2 <- ggplot(adj_r2_tib_traits, aes(y = residuals, x = Trophic.Niche, group = Trophic.Niche)) +
+p2_bp <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = Trophic.Niche, group = Trophic.Niche)) +
   geom_boxplot()  +
   # geom_violin() +
   xlab("Trophic Niche") +
@@ -289,7 +241,7 @@ p2 <- ggplot(adj_r2_tib_traits, aes(y = residuals, x = Trophic.Niche, group = Tr
   geom_hline(yintercept = 0, linetype = "dashed") #+
   # ylim(-3,5)
 
-p3 <- ggplot(adj_r2_tib_traits, aes(y = residuals, x = Trophic.Level, group = Trophic.Level)) +
+p3_bp <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = Trophic.Level, group = Trophic.Level)) +
   geom_boxplot() +
   # geom_violin() +
   xlab("Trophic Level") +
@@ -298,86 +250,184 @@ p3 <- ggplot(adj_r2_tib_traits, aes(y = residuals, x = Trophic.Level, group = Tr
   geom_hline(yintercept = 0, linetype = "dashed") #+
   # ylim(-3,5)
 
-p4 <- ggplot(adj_r2_tib_traits, aes(y = residuals, x = Migrant, group = Migrant)) +
+p4_bp <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = Migrant, group = Migrant)) +
   geom_boxplot() +
   # geom_violin() +
-  xlab("Trophic Level") +
+  xlab("Migratory status") +
   ylab("") +
   theme(axis.text.x = element_text(angle = 45, hjust = 0.8)) +
   geom_hline(yintercept = 0, linetype = "dashed")
+
+boxplot <- p1_bp + p2_bp + p3_bp + p4_bp
+
+boxplot
+
+# ---- pop. trend plots ---- 
+
+p1 <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = ACAD.ind, group = ACAD.ind)) +
+  geom_boxplot() +
+  xlab("ACAD pop. trend") +
+  ylab("Residuals") +
+  geom_hline(yintercept = 0, linetype = "dashed") #+
+# ylim(-5,3)
+
+p2 <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = sauer.trend)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth()  +
+  # geom_abline() +
+  xlab("Sauer's pop. trend") +
+  ylab("") +
+  geom_hline(yintercept = 0, linetype = "dashed") #+
+# ylim(-5,3)
+
+pop_trend <- p1 + p2
+
+pop_trend
+# ---- var.imp plots -----
+
+ggplot(var.imp.pc, aes(y = reorder(bird, var.imp.ratio), x = var.imp.ratio)) +
+  geom_point() +
+  geom_vline(xintercept = 1)
+
+ggplot(var.imp.lc, aes(y = reorder(bird, var.imp.ratio), x = var.imp.ratio)) +
+  geom_point() +
+  geom_vline(xintercept = 1)
+
+
+# ---- continuous traits plots ~ var.imp ----
+
+p1 <- ggplot(adj_r2_lc_traits, aes(y = var.imp.ratio, x = log(GenLength))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth() +
+  # geom_abline() +
+  ylab("Var. imp. ratio") +
+  xlab("log(Generation length)")  +
+  geom_hline(yintercept = 1, linetype = "dashed") #+
+# ylim(-0.1,0.1)
+
+p2 <- ggplot(adj_r2_lc_traits, aes(y = var.imp.ratio, x = Clutch.Bird)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth()+
+  # geom_abline() +
+  xlab("Clutch size") +
+  ylab("") +
+  geom_hline(yintercept = 1, linetype = "dashed") #+
+# ylim(-0.1,0.1)
+
+p3 <- ggplot(adj_r2_lc_traits, aes(y = var.imp.ratio, x = diet.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth() +
+  # geom_abline() +
+  xlab("Diet breadth") +
+  ylab("")  +
+  geom_hline(yintercept = 1, linetype = "dashed") #+
+# ylim(-0.1,0.1)
+
+p4 <- ggplot(adj_r2_lc_traits, aes(y = var.imp.ratio, x = hab.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth()+
+  # geom_abline() +
+  xlab("Habitat breadth") +
+  ylab("Var. imp. ratio") +
+  geom_hline(yintercept = 1, linetype = "dashed") #+
+# ylim(-0.1,0.1)
+
+p5 <- ggplot(adj_r2_lc_traits, aes(y = var.imp.ratio, x = log(body.mass))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth()+
+  # geom_abline() +
+  xlab("log(Body mass)") +
+  ylab("") +
+  geom_hline(yintercept = 1, linetype = "dashed") #+
+# ylim(-0.1,0.1)
+
+p6 <- ggplot(adj_r2_lc_traits, aes(y = var.imp.ratio, x = hand.wing.ind)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth() +
+  # geom_abline() +
+  xlab("Hand-wing index") +
+  ylab("") +
+  geom_hline(yintercept = 1, linetype = "dashed") #+
+# ylim(-0.1, 0.1)
+
+p7 <- ggplot(adj_r2_lc_traits, aes(y = var.imp.ratio, x = rel_brain_size)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth() +
+  xlab("Relative brain size") +
+  ylab("Var. imp. ratio") +
+  geom_hline(yintercept = 1, linetype = "dashed") #+
+# ylim(-0.1,0.1)
+
+final_plot <- p1 + p2 + p3 + p4 + p5 + p6 + p7
+
+final_plot
+
+# ---- categorical traits ~ var.imp ----
+
+p1 <- ggplot(adj_r2_lc_traits, aes(y = var.imp.ratio, x = log(tot.innov), group = tot.innov)) +
+  geom_boxplot() +
+  # geom_violin() +
+  ylab("Var. imp. ratio") +
+  xlab("log(Innovativeness)")  +
+  geom_hline(yintercept = 1, linetype = "dashed") #+
+# ylim(-3,5)
+
+p2 <- ggplot(adj_r2_lc_traits, aes(y = var.imp.ratio, x = Trophic.Niche, group = Trophic.Niche)) +
+  geom_boxplot()  +
+  # geom_violin() +
+  xlab("Trophic Niche") +
+  ylab("") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.8)) +
+  geom_hline(yintercept = 1, linetype = "dashed") #+
+# ylim(-3,5)
+
+p3 <- ggplot(adj_r2_lc_traits, aes(y = var.imp.ratio, x = Trophic.Level, group = Trophic.Level)) +
+  geom_boxplot() +
+  # geom_violin() +
+  xlab("Trophic Level") +
+  ylab("Var. imp. ratio") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.8)) +
+  geom_hline(yintercept = 1, linetype = "dashed") #+
+# ylim(-3,5)
+
+p4 <- ggplot(adj_r2_lc_traits, aes(y = var.imp.ratio, x = Migrant, group = Migrant)) +
+  geom_boxplot() +
+  # geom_violin() +
+  xlab("Migratory status") +
+  ylab("") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.8)) +
+  geom_hline(yintercept = 1, linetype = "dashed")
 
 boxplot <- p1 + p2 + p3 + p4
 
 boxplot
 
+# ---- Anova ----
 
-# ---- with PC1 and PC2 ----
 
-# ---- load data ----
 
-# load("data/d.abund.min6.rda")
-# load("data/d.abund.min10.rda")
-load("data/d.abund.min40.rda")
-
-load("data/Climate/climate_df.rda")
-# load("data/Land_use/land_use_area_t1_t2.rda")
-load("data/Landuse_PC1_PC2.rda")
-
-# ---- bioclim data ----
-
-climate.df <- climate_df %>%
-  # filter(year == 2001) %>%
-  select(-c(contains("var"), contains("median")), contains("mean"),
-         -c(pr.sum.mean, cmi.annual.mean, pr.diff.mean))
-
-clim.t1 <- climate.df %>% filter(year == 2001) %>% select(-year)
-
-dclim <- climate.df %>%
-  arrange(segment) %>%
-  group_by(segment) %>%
-  mutate(
-    across(
-      .cols = matches('mean') | matches('log'),
-      # .fns = \(.) lag(.)-.,
-      .fns = ~ ifelse(!is.na(lag(.)), . - lag(.), NA),
-      .names = "delta.{col}"
-    )
-  ) %>%
-  select(segment, contains("delta")) %>%
-  na.omit()
-
-clim.df <- clim.t1 %>% left_join(dclim, by = "segment"); rm(climate_df, climate.df, clim.t1, dclim)
-
-lc.df <- lc.pcs %>% select(-year)
-
-rm(lc.pcs)
-
-# ---- full data set ----
-
-abund.min40 <- d.abund.min40 %>%
-  select(segment, animal_jetz, delta.abund) %>%
-  left_join(clim.df, by = "segment") %>%
-  left_join(lc.df, by = "segment") %>%
+anova.data <- adj_r2_lc_traits %>%
   na.omit() %>%
-  group_by(animal_jetz) %>%
-  mutate(n_entries = n()) %>%
-  filter(n_entries >= 40) %>%
-  select(-n_entries)
+  select(-c(bird, adj.r2, adj.r2_clim, adj.r2_lc,
+            Common.Name, tot_diet_div, shannon, Clutch))
 
-# length(unique(abund.min40$animal_jetz))
+anova.lc <- aov(residuals ~ GenLength, data = anova.data)
 
+summary(anova.lc)
+
+
+# ==== with PC1 and PC2 ----
 # ---- LM function -----
+birds <- unique(abund.min40.pc$animal_jetz)
+vars.all <- colnames(abund.min40.pc[4:15])
 
-birds <- unique(abund.min40$animal_jetz)
-vars.all <- colnames(abund.min40[4:15])
+clim_vars <- colnames(abund.min40.pc[4:11])
+lc_vars <- colnames(abund.min40.pc[12:15])
 
-clim_vars <- colnames(abund.min40[4:11])
-lc_vars <- colnames(abund.min40[12:15])
-
-adj_r2_tib <- tibble(bird = character(),
+adj_r2_pc <- tibble(bird = character(),
                      adj.r2 = numeric())
 
-var.imp.tib <- tibble(bird = character(),
+var.imp.pc <- tibble(bird = character(),
                       var.imp.ratio = numeric(),
                       variables = character(),
                       var.imps = numeric())
@@ -386,7 +436,7 @@ for(bird.ind in birds){
   
   print(paste0("working on ", which(birds == bird.ind), "/", length(birds), " ..."))
   
-  bird.tmp <- abund.min40 %>%
+  bird.tmp <- abund.min40.pc %>%
     filter(animal_jetz == bird.ind) %>%
     tibble::rowid_to_column(., "ID")
   
@@ -403,32 +453,47 @@ for(bird.ind in birds){
   
   train_control <- caret::trainControl(method = "cv", number = 10)
   
-  full.lm_model <- caret::train(
-    delta.abund~.,
-    data = all.bird_data,
-    method = "lm",
-    trControl = train_control
+  tryCatch({
+    full.lm_model <- caret::train(
+      delta.abund~.,
+      data = all.bird_data,
+      method = "lm",
+      trControl = train_control
+    )
+    
+    adj.r2.full <- summary(full.lm_model$finalModel)$r.squared
+  }, warning = function(w){
+    cat("Warning encountered for bird", bird.ind, "during full model training:", conditionMessage(w), "\n")
+  }
   )
   
-  adj.r2.full <- summary(full.lm_model$finalModel)$r.squared
-  
-  lc.lm_model <- caret::train(
-    delta.abund~.,
-    data = lc.bird_data,
-    method = "lm",
-    trControl = train_control
+  tryCatch({
+    lc.lm_model <- caret::train(
+      delta.abund~.,
+      data = lc.bird_data,
+      method = "lm",
+      trControl = train_control
+    )
+    
+    adj.r2.lc <- summary(lc.lm_model$finalModel)$r.squared
+  }, warning = function(w){
+    cat("Warning encountered for bird", bird.ind, "during land cover model training:", conditionMessage(w), "\n")
+  }
   )
   
-  adj.r2.lc <- summary(lc.lm_model$finalModel)$r.squared
-  
-  clim.lm_model <- caret::train(
-    delta.abund~.,
-    data = clim.bird_data,
-    method = "lm",
-    trControl = train_control
+  tryCatch({
+    clim.lm_model <- caret::train(
+      delta.abund~.,
+      data = clim.bird_data,
+      method = "lm",
+      trControl = train_control
+    )
+    
+    adj.r2.clim <- summary(clim.lm_model$finalModel)$r.squared
+  }, warning = function(w){
+    cat("Warning encountered for bird", bird.ind, "during climate model training:", conditionMessage(w), "\n")
+  }
   )
-  
-  adj.r2.clim <- summary(clim.lm_model$finalModel)$r.squared
   
   residuals.now <- adj.r2.full - (adj.r2.clim + adj.r2.lc)
   
@@ -438,7 +503,7 @@ for(bird.ind in birds){
                      adj.r2_lc = adj.r2.lc,
                      residuals = residuals.now)
   
-  adj_r2_tib <- bind_rows(adj_r2_tib, new_row1)
+  adj_r2_pc <- bind_rows(adj_r2_pc, new_row1)
   
   
   varImp.full <- caret::varImp(full.lm_model)$importance
@@ -456,94 +521,162 @@ for(bird.ind in birds){
                               variables = rownames(var.imp.adj),
                               var.imps = var.imp.adj[,1])
   
-  var.imp.tib <- bind_rows(var.imp.tib, new_entry_var.imp)
+  var.imp.pc <- bind_rows(var.imp.pc, new_entry_var.imp)
 }
 
-
-ggplot(var.imp.tib, aes(y = reorder(bird, var.imp.ratio), x = var.imp.ratio)) +
-  geom_point() +
-  geom_vline(xintercept = 1)
-
-ggplot(var.imp.tib, aes(y = bird, x = var.imp.ratio)) +
-  geom_point() +
-  geom_vline(xintercept = 1)
+rm(all.bird_data, bird.tmp, clim.bird_data, clim.lm_model, full.lm_model, lc.bird_data,
+   lc.lm_model, new_entry_var.imp, new_row1, train_control, var.imp.adj, varImp.full,
+   adj.r2.clim, adj.r2.full, adj.r2.lc, all.predictors, bird.ind, birds, clim_vars, clim.imp, clim.predictors,
+   lc_vars, lc.imp, lc.predictors, residuals.now, response, var.imp.ratio, vars.all)
 
 
-adj_r_tib_trained <- tibble(bird = character(),
-                             adj.r2 = numeric())
-
-for (bird.ind in birds) {
-  print(paste0("working on ", which(birds == bird.ind), "/", length(birds), " ..."))
-  
-  bird.tmp <- abund.min40 %>%
-    filter(animal_jetz == bird.ind) %>%
-    tibble::rowid_to_column(., "ID")
-  
-  # Define your predictor variables and response variable
-  predictors <- vars.all
-  response <- "delta.abund"
-  
-  # Create a data frame with predictors and response
-  bird_data <- bird.tmp[, c(predictors, response)]
-  
-  # Define a training control object for k-fold cross-validation
-  train_control <- caret::trainControl(method = "cv", number = 10)
-  
-  # Train the linear model with cross-validation
-  lm_model <- caret::train(
-    delta.abund~.,
-    data = bird_data,
-    method = "lm",
-    trControl = train_control
-  )
-  
-  # Access model performance metrics
-  adj.r2.now <- summary(lm_model$finalModel)$r.squared
-  
-  new_entry <- tibble(bird = bird.ind,
-                      adj.r2 = adj.r2.now)
-  
-  adj_r_tib_trained <- bind_rows(adj_r_tib_trained, new_entry)
-  
-  # Add the model to your LM_list if needed
-  LM_list[[bird.ind]] <- lm_model
-  
-  # You can access other metrics like RMSE from lm_model$results as well
-}
 
 
-summary(LM_list[[1]])
-
-rm(bird_model, bird.test, bird.train, bird.tmp, clim.df,
-   clim.mod, folds, full.mod, lc.df, lc.mod, new_row1, new_row2,
-   adj.r2.clim, adj.r2.lc, adj.r2.now, bird.ind, clim_vars, lc_vars, lm_formula,
-   mean_rmse, n_fold, num_folds, predicted_values, residuals.now, rmse, rmse_values, vars, vars.all)
-
-# adj_r2_tib_traits <- adj_r2_tib_traits %>% filter(bird != "Empidonax_traillii")
-
-
-# ---- 
+# ---- species traits ----
 load("data/species_traits.rda")
 
 species.traits <- species.traits %>% rename(bird =  animal_jetz)
 
-adj_r2_tib_traits <- var.imp.tib %>% left_join(species.traits, by = "bird") %>%
+adj_r2_pc_traits <- adj_r2_pc %>% left_join(species.traits, by = "bird") %>%
+  left_join(var.imp.pc, by = "bird") %>%
   mutate(na.num = rowSums(is.na(.))) %>%
   filter(na.num != 17) %>%
-  select(-na.num)
+  select(-na.num) %>%
+  select(-variables, -var.imps) %>%
+  distinct()
 
-# ---- continuous traits plots ~ var.imp ----
+# ---- continuous traits plots ----
 
-p1 <- ggplot(adj_r2_tib_traits, aes(y = var.imp.ratio, x = log(GenLength))) +
+p1 <- ggplot(adj_r2_pc_traits, aes(y = residuals, x = log(GenLength))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth() +
   # geom_abline() +
   ylab("Residuals") +
   xlab("log(Generation length)")  +
+  geom_hline(yintercept = 0, linetype = "dashed") #+
+# ylim(-0.1,0.1)
+
+p2 <- ggplot(adj_r2_pc_traits, aes(y = residuals, x = Clutch.Bird)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth()+
+  # geom_abline() +
+  xlab("Clutch size") +
+  ylab("") +
+  geom_hline(yintercept = 0, linetype = "dashed") #+
+# ylim(-0.1,0.1)
+
+p3 <- ggplot(adj_r2_pc_traits, aes(y = residuals, x = diet.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth() +
+  # geom_abline() +
+  xlab("Diet breadth") +
+  ylab("")  +
+  geom_hline(yintercept = 0, linetype = "dashed") #+
+# ylim(-0.1,0.1)
+
+p4 <- ggplot(adj_r2_pc_traits, aes(y = residuals, x = hab.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth()+
+  # geom_abline() +
+  xlab("Habitat breadth") +
+  ylab("Residuals") +
+  geom_hline(yintercept = 0, linetype = "dashed") #+
+# ylim(-0.1,0.1)
+
+p5 <- ggplot(adj_r2_pc_traits, aes(y = residuals, x = log(body.mass))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth()+
+  # geom_abline() +
+  xlab("log(Body mass)") +
+  ylab("") +
+  geom_hline(yintercept = 0, linetype = "dashed") #+
+# ylim(-0.1,0.1)
+
+p6 <- ggplot(adj_r2_pc_traits, aes(y = residuals, x = hand.wing.ind)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth() +
+  # geom_abline() +
+  xlab("Hand-wing index") +
+  ylab("Residuals")  +
+  geom_hline(yintercept = 0, linetype = "dashed") #+
+# ylim(-0.1, 0.1)
+
+p7 <- ggplot(adj_r2_pc_traits, aes(y = residuals, x = rel_brain_size)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth() +
+  xlab("Relative brain size") +
+  ylab("Residuals") +
+  geom_hline(yintercept = 0, linetype = "dashed") #+
+# ylim(-0.1,0.1)
+
+final_plot <- p1 + p2 + p3 + p4 + p5 + p6 + p7
+
+final_plot
+
+# ---- categorical traits ----
+
+p1_bp <- ggplot(adj_r2_pc_traits, aes(y = residuals, x = log(tot.innov), group = tot.innov)) +
+  geom_boxplot() +
+  # geom_violin() +
+  ylab("Residuals") +
+  xlab("log(Innovativeness)")  +
+  geom_hline(yintercept = 0, linetype = "dashed") #+
+# ylim(-3,5)
+
+p2_bp <- ggplot(adj_r2_pc_traits, aes(y = residuals, x = Trophic.Niche, group = Trophic.Niche)) +
+  geom_boxplot()  +
+  # geom_violin() +
+  xlab("Trophic Niche") +
+  ylab("") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.8)) +
+  geom_hline(yintercept = 0, linetype = "dashed") #+
+# ylim(-3,5)
+
+p3_bp <- ggplot(adj_r2_pc_traits, aes(y = residuals, x = Trophic.Level, group = Trophic.Level)) +
+  geom_boxplot() +
+  # geom_violin() +
+  xlab("Trophic Level") +
+  ylab("") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.8)) +
+  geom_hline(yintercept = 0, linetype = "dashed") #+
+# ylim(-3,5)
+
+p4_bp <- ggplot(adj_r2_pc_traits, aes(y = residuals, x = Migrant, group = Migrant)) +
+  geom_boxplot() +
+  # geom_violin() +
+  xlab("Migratory status") +
+  ylab("") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.8)) +
+  geom_hline(yintercept = 0, linetype = "dashed")
+
+boxplot <- p1_bp + p2_bp + p3_bp + p4_bp
+
+boxplot
+
+
+# ---- var.imp plots -----
+
+ggplot(var.imp.pc, aes(y = reorder(bird, var.imp.ratio), x = var.imp.ratio)) +
+  geom_point() +
+  geom_vline(xintercept = 1)
+
+ggplot(var.imp.lc, aes(y = reorder(bird, var.imp.ratio), x = var.imp.ratio)) +
+  geom_point() +
+  geom_vline(xintercept = 1)
+
+
+# ---- continuous traits plots ~ var.imp ----
+
+p1 <- ggplot(adj_r2_pc_traits, aes(y = var.imp.ratio, x = log(GenLength))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth() +
+  # geom_abline() +
+  ylab("Var. imp. ratio") +
+  xlab("log(Generation length)")  +
   geom_hline(yintercept = 1, linetype = "dashed") #+
 # ylim(-0.1,0.1)
 
-p2 <- ggplot(adj_r2_tib_traits, aes(y = var.imp.ratio, x = Clutch.Bird)) +
+p2 <- ggplot(adj_r2_pc_traits, aes(y = var.imp.ratio, x = Clutch.Bird)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth()+
   # geom_abline() +
@@ -552,7 +685,7 @@ p2 <- ggplot(adj_r2_tib_traits, aes(y = var.imp.ratio, x = Clutch.Bird)) +
   geom_hline(yintercept = 1, linetype = "dashed") #+
 # ylim(-0.1,0.1)
 
-p3 <- ggplot(adj_r2_tib_traits, aes(y = var.imp.ratio, x = diet.breadth)) +
+p3 <- ggplot(adj_r2_pc_traits, aes(y = var.imp.ratio, x = diet.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth() +
   # geom_abline() +
@@ -561,16 +694,16 @@ p3 <- ggplot(adj_r2_tib_traits, aes(y = var.imp.ratio, x = diet.breadth)) +
   geom_hline(yintercept = 1, linetype = "dashed") #+
 # ylim(-0.1,0.1)
 
-p4 <- ggplot(adj_r2_tib_traits, aes(y = var.imp.ratio, x = hab.breadth)) +
+p4 <- ggplot(adj_r2_pc_traits, aes(y = var.imp.ratio, x = hab.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth()+
   # geom_abline() +
   xlab("Habitat breadth") +
-  ylab("Residuals") +
+  ylab("Var. imp. ratio") +
   geom_hline(yintercept = 1, linetype = "dashed") #+
 # ylim(-0.1,0.1)
 
-p5 <- ggplot(adj_r2_tib_traits, aes(y = var.imp.ratio, x = log(body.mass))) +
+p5 <- ggplot(adj_r2_pc_traits, aes(y = var.imp.ratio, x = log(body.mass))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth()+
   # geom_abline() +
@@ -579,20 +712,20 @@ p5 <- ggplot(adj_r2_tib_traits, aes(y = var.imp.ratio, x = log(body.mass))) +
   geom_hline(yintercept = 1, linetype = "dashed") #+
 # ylim(-0.1,0.1)
 
-p6 <- ggplot(adj_r2_tib_traits, aes(y = var.imp.ratio, x = hand.wing.ind)) +
+p6 <- ggplot(adj_r2_pc_traits, aes(y = var.imp.ratio, x = hand.wing.ind)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth() +
   # geom_abline() +
   xlab("Hand-wing index") +
-  ylab("Residuals")  +
+  ylab("") +
   geom_hline(yintercept = 1, linetype = "dashed") #+
 # ylim(-0.1, 0.1)
 
-p7 <- ggplot(adj_r2_tib_traits, aes(y = var.imp.ratio, x = rel_brain_size)) +
+p7 <- ggplot(adj_r2_pc_traits, aes(y = var.imp.ratio, x = rel_brain_size)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth() +
   xlab("Relative brain size") +
-  ylab("Residuals") +
+  ylab("Var. imp. ratio") +
   geom_hline(yintercept = 1, linetype = "dashed") #+
 # ylim(-0.1,0.1)
 
@@ -602,15 +735,15 @@ final_plot
 
 # ---- categorical traits ~ var.imp ----
 
-p1 <- ggplot(adj_r2_tib_traits, aes(y = var.imp.ratio, x = log(tot.innov), group = tot.innov)) +
+p1 <- ggplot(adj_r2_pc_traits, aes(y = var.imp.ratio, x = log(tot.innov), group = tot.innov)) +
   geom_boxplot() +
   # geom_violin() +
-  ylab("Residuals") +
+  ylab("Var. imp. ratio") +
   xlab("log(Innovativeness)")  +
   geom_hline(yintercept = 1, linetype = "dashed") #+
 # ylim(-3,5)
 
-p2 <- ggplot(adj_r2_tib_traits, aes(y = var.imp.ratio, x = Trophic.Niche, group = Trophic.Niche)) +
+p2 <- ggplot(adj_r2_pc_traits, aes(y = var.imp.ratio, x = Trophic.Niche, group = Trophic.Niche)) +
   geom_boxplot()  +
   # geom_violin() +
   xlab("Trophic Niche") +
@@ -619,19 +752,19 @@ p2 <- ggplot(adj_r2_tib_traits, aes(y = var.imp.ratio, x = Trophic.Niche, group 
   geom_hline(yintercept = 1, linetype = "dashed") #+
 # ylim(-3,5)
 
-p3 <- ggplot(adj_r2_tib_traits, aes(y = var.imp.ratio, x = Trophic.Level, group = Trophic.Level)) +
+p3 <- ggplot(adj_r2_pc_traits, aes(y = var.imp.ratio, x = Trophic.Level, group = Trophic.Level)) +
   geom_boxplot() +
   # geom_violin() +
   xlab("Trophic Level") +
-  ylab("") +
+  ylab("Var. imp. ratio") +
   theme(axis.text.x = element_text(angle = 45, hjust = 0.8)) +
   geom_hline(yintercept = 1, linetype = "dashed") #+
 # ylim(-3,5)
 
-p4 <- ggplot(adj_r2_tib_traits, aes(y = var.imp.ratio, x = Migrant, group = Migrant)) +
+p4 <- ggplot(adj_r2_pc_traits, aes(y = var.imp.ratio, x = Migrant, group = Migrant)) +
   geom_boxplot() +
   # geom_violin() +
-  xlab("Trophic Level") +
+  xlab("Migratory status") +
   ylab("") +
   theme(axis.text.x = element_text(angle = 45, hjust = 0.8)) +
   geom_hline(yintercept = 1, linetype = "dashed")
@@ -639,6 +772,33 @@ p4 <- ggplot(adj_r2_tib_traits, aes(y = var.imp.ratio, x = Migrant, group = Migr
 boxplot <- p1 + p2 + p3 + p4
 
 boxplot
+
+# ---- pop. trend plots ---- 
+
+p1 <- ggplot(adj_r2_pc_traits, aes(y = residuals, x = ACAD.ind, group = ACAD.ind)) +
+  geom_boxplot() +
+  xlab("ACAD pop. trend") +
+  ylab("Residuals") +
+  geom_hline(yintercept = 0, linetype = "dashed") #+
+  # ylim(-5,3)
+
+p2 <- ggplot(adj_r2_pc_traits, aes(y = residuals, x = sauer.trend)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth()  +
+  # geom_abline() +
+  xlab("Sauer's pop. trend") +
+  ylab("") +
+  geom_hline(yintercept = 0, linetype = "dashed") #+
+  # ylim(-5,3)
+
+pop_trend <- p1 + p2
+
+pop_trend
+
+# ---- Anova ----
+
+lm.mig.pc <- lm(residuals ~ var.imp.ratio, data = adj_r2_pc_traits)
+anova.mig.pc <- anova(lm.mig.pc)
 
 # ========== Old ----
 # ---- LM function ----
