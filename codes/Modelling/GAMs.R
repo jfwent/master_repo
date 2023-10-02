@@ -101,13 +101,7 @@ for(year.ind in years){
 
 
 
-# min 40----
-
-BBS.dat <- BBS.stable.full.min40 %>%
-  mutate(urban = urban.high.area.m2.log + urban.low.area.m2.log,
-         all.grass = grass.area.m2.log + pasture.area.m2.log) %>%
-  select(-barren.area.m2.log, -wet.area.m2.log, -urban.low.area.m2.log,
-         -urban.high.area.m2.log, -pasture.area.m2.log, -grass.area.m2.log)
+# ---- abundance based GAM ----
 
 birds <- unique(BBS.dat$animal_jetz)
 

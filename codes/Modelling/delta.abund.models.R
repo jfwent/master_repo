@@ -6,7 +6,6 @@
 library(tidyverse)
 library(patchwork)
 library(ggplot2)
-install.packages("aov")
 
 # ==== with land cover vars -----
 # ---- LM function -----
@@ -149,10 +148,11 @@ traits <- colnames(species.traits[2:14])
 adj_r2_lc_traits <- adj_r2_lc %>% left_join(species.traits, by = "bird") %>%
   left_join(var.imp.lc, by = "bird") %>%
   mutate(na.num = rowSums(is.na(.))) %>%
-  filter(na.num != 17) %>%
+  filter(na.num != 13) %>%
   select(-na.num) %>%
   select(-variables, -var.imps) %>%
-  distinct()
+  distinct() #%>%
+  # na.omit()
 
 # ---- continuous traits plots ----
 
@@ -222,6 +222,10 @@ final_plot <- p1 + p2 + p3 + p4 + p5 + p6 + p7
 
 final_plot
 
+ggsave(filename = "figures/contin_traits_residuals_full_LM.png", plot = final_plot,
+       width = 8, height = 6, dpi = 300)
+
+
 # ---- categorical traits ----
 
 p1_bp <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = log(tot.innov), group = tot.innov)) +
@@ -262,6 +266,10 @@ boxplot <- p1_bp + p2_bp + p3_bp + p4_bp
 
 boxplot
 
+ggsave(filename = "figures/cat_traits_residuals_full_LM.png", plot = boxplot,
+       width = 8, height = 6, dpi = 300)
+
+
 # ---- pop. trend plots ---- 
 
 p1 <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = ACAD.ind, group = ACAD.ind)) +
@@ -283,15 +291,25 @@ p2 <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = sauer.trend)) +
 pop_trend <- p1 + p2
 
 pop_trend
-# ---- var.imp plots -----
 
-ggplot(var.imp.pc, aes(y = reorder(bird, var.imp.ratio), x = var.imp.ratio)) +
-  geom_point() +
-  geom_vline(xintercept = 1)
+ggsave(filename = "figures/pop_trend_residuals_full_LM.png", plot = pop_trend,
+       width = 8, height = 6, dpi = 300)
 
-ggplot(var.imp.lc, aes(y = reorder(bird, var.imp.ratio), x = var.imp.ratio)) +
-  geom_point() +
-  geom_vline(xintercept = 1)
+# ---- var.imp plot -----
+
+var.imp.ratio.lc <- ggplot(var.imp.lc, aes(y = reorder(bird, var.imp.ratio), x = var.imp.ratio,
+                       color = var.imp.ratio)) +
+  geom_point(alpha = 0.5) +
+  scale_color_gradient(low = "royalblue", high = "red") +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "grey60") +
+  theme(axis.text=element_text(size=7)) +
+  xlab("Variable importance climate:land use") +
+  ylab("")
+
+var.imp.ratio.lc
+
+ggsave(filename = "figures/var_imp_ratio_full_LM.png", plot = var.imp.ratio.lc,
+       width = 8, height = 6, dpi = 300)
 
 
 # ---- continuous traits plots ~ var.imp ----
@@ -362,6 +380,10 @@ final_plot <- p1 + p2 + p3 + p4 + p5 + p6 + p7
 
 final_plot
 
+ggsave(filename = "figures/cont_traits_var.imp.ratio_full_LM.png", plot = final_plot,
+       width = 8, height = 6, dpi = 300)
+
+
 # ---- categorical traits ~ var.imp ----
 
 p1 <- ggplot(adj_r2_lc_traits, aes(y = var.imp.ratio, x = log(tot.innov), group = tot.innov)) +
@@ -402,19 +424,34 @@ boxplot <- p1 + p2 + p3 + p4
 
 boxplot
 
+ggsave(filename = "figures/cat_traits_var.imp.ratio_full_LM.png", plot = boxplot,
+       width = 8, height = 6, dpi = 300)
+
+
 # ---- Anova ----
-
-
 
 anova.data <- adj_r2_lc_traits %>%
   na.omit() %>%
   select(-c(bird, adj.r2, adj.r2_clim, adj.r2_lc,
-            Common.Name, tot_diet_div, shannon, Clutch))
+            var.imp.ratio, ACAD.ind, Trophic.Niche))
 
-anova.lc <- aov(residuals ~ GenLength, data = anova.data)
-
+anova.lc <- aov(residuals ~ .,
+                data = anova.data)
 summary(anova.lc)
 
+anova.lc <- aov(residuals ~ diet.breadth*hab.breath + Migrant*hand.wing.ind + 
+                  rel_brain_size*tot.innov + GenLength*Clutch.Bird +.,
+                data = anova.data)
+summary(anova.lc)
+
+anova.lc <- aov(residuals ~ diet.breadth*Trophic.Level + ., data = anova.data)
+summary(anova.lc)
+
+anova.lc <- aov(residuals ~ GenLength * Clutch.Bird + body.mass, data = anova.data)
+summary(anova.lc)
+
+anova.lc <- aov(residuals ~ hand.wing.ind * Migrant + body.mass, data = anova.data)
+summary(anova.lc)
 
 # ==== with PC1 and PC2 ----
 # ---- LM function -----
@@ -535,12 +572,14 @@ rm(all.bird_data, bird.tmp, clim.bird_data, clim.lm_model, full.lm_model, lc.bir
 # ---- species traits ----
 load("data/species_traits.rda")
 
-species.traits <- species.traits %>% rename(bird =  animal_jetz)
+species.traits <- species.traits %>%
+  rename(bird =  animal_jetz)  %>%
+  select(-c(Common.Name, tot_diet_div, shannon, Clutch))
 
 adj_r2_pc_traits <- adj_r2_pc %>% left_join(species.traits, by = "bird") %>%
   left_join(var.imp.pc, by = "bird") %>%
   mutate(na.num = rowSums(is.na(.))) %>%
-  filter(na.num != 17) %>%
+  filter(na.num != 13) %>%
   select(-na.num) %>%
   select(-variables, -var.imps) %>%
   distinct()
@@ -613,6 +652,10 @@ final_plot <- p1 + p2 + p3 + p4 + p5 + p6 + p7
 
 final_plot
 
+ggsave(filename = "figures/Full_LM/PC1_PC2/cont_traits_residuals_PCA.png", plot = final_plot,
+       width = 8, height = 6, dpi = 300)
+
+
 # ---- categorical traits ----
 
 p1_bp <- ggplot(adj_r2_pc_traits, aes(y = residuals, x = log(tot.innov), group = tot.innov)) +
@@ -653,17 +696,50 @@ boxplot <- p1_bp + p2_bp + p3_bp + p4_bp
 
 boxplot
 
+ggsave(filename = "figures/Full_LM/PC1_PC2/cat_traits_residuals_PCA.png", plot = boxplot,
+       width = 8, height = 6, dpi = 300)
 
-# ---- var.imp plots -----
+# ---- pop. trend plots ---- 
 
-ggplot(var.imp.pc, aes(y = reorder(bird, var.imp.ratio), x = var.imp.ratio)) +
-  geom_point() +
-  geom_vline(xintercept = 1)
+p1 <- ggplot(adj_r2_pc_traits, aes(y = residuals, x = ACAD.ind, group = ACAD.ind)) +
+  geom_boxplot() +
+  xlab("ACAD pop. trend") +
+  ylab("Residuals") +
+  geom_hline(yintercept = 0, linetype = "dashed") #+
+# ylim(-5,3)
 
-ggplot(var.imp.lc, aes(y = reorder(bird, var.imp.ratio), x = var.imp.ratio)) +
-  geom_point() +
-  geom_vline(xintercept = 1)
+p2 <- ggplot(adj_r2_pc_traits, aes(y = residuals, x = sauer.trend)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth()  +
+  # geom_abline() +
+  xlab("Sauer's pop. trend") +
+  ylab("") +
+  geom_hline(yintercept = 0, linetype = "dashed") #+
+# ylim(-5,3)
 
+pop_trend <- p1 + p2
+
+pop_trend
+
+ggsave(filename = "figures/Full_LM/PC1_PC2/pop_trend_residuals_PCA.png", plot = pop_trend,
+       width = 8, height = 6, dpi = 300)
+
+
+# ---- var.imp plot -----
+
+var.imp.PCA <- ggplot(var.imp.pc, aes(y = reorder(bird, var.imp.ratio), x = var.imp.ratio,
+                       color = var.imp.ratio)) +
+  geom_point(alpha = 0.5) +
+  scale_color_gradient(low = "royalblue", high = "red2") +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "grey60") +
+  theme(axis.text=element_text(size=7)) +
+  xlab("Variable importance climate:land use") +
+  ylab("")
+
+var.imp.PCA
+
+ggsave(filename = "figures/Full_LM/PC1_PC2/var.imp.plot_PCA.png", plot = var.imp.PCA,
+       width = 8, height = 6, dpi = 300)
 
 # ---- continuous traits plots ~ var.imp ----
 
@@ -733,6 +809,10 @@ final_plot <- p1 + p2 + p3 + p4 + p5 + p6 + p7
 
 final_plot
 
+ggsave(filename = "figures/Full_LM/PC1_PC2/cont_traits_var.imp_PCA.png", plot = final_plot,
+       width = 8, height = 6, dpi = 300)
+
+
 # ---- categorical traits ~ var.imp ----
 
 p1 <- ggplot(adj_r2_pc_traits, aes(y = var.imp.ratio, x = log(tot.innov), group = tot.innov)) +
@@ -773,32 +853,36 @@ boxplot <- p1 + p2 + p3 + p4
 
 boxplot
 
-# ---- pop. trend plots ---- 
+ggsave(filename = "figures/Full_LM/PC1_PC2/cat_traits_var.imp_PCA.png", plot = boxplot,
+       width = 8, height = 6, dpi = 300)
 
-p1 <- ggplot(adj_r2_pc_traits, aes(y = residuals, x = ACAD.ind, group = ACAD.ind)) +
-  geom_boxplot() +
-  xlab("ACAD pop. trend") +
-  ylab("Residuals") +
-  geom_hline(yintercept = 0, linetype = "dashed") #+
-  # ylim(-5,3)
-
-p2 <- ggplot(adj_r2_pc_traits, aes(y = residuals, x = sauer.trend)) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth()  +
-  # geom_abline() +
-  xlab("Sauer's pop. trend") +
-  ylab("") +
-  geom_hline(yintercept = 0, linetype = "dashed") #+
-  # ylim(-5,3)
-
-pop_trend <- p1 + p2
-
-pop_trend
 
 # ---- Anova ----
+# levene test:
+# hand-wing index and sauer population trend differ variance between groups
+# exclude from anova
 
-lm.mig.pc <- lm(residuals ~ var.imp.ratio, data = adj_r2_pc_traits)
-anova.mig.pc <- anova(lm.mig.pc)
+# residuals are normal distributed
+
+# data in traits is not normally distributed....
+
+anova.data <- adj_r2_pc_traits %>%
+  na.omit() %>%
+  select(-c(bird, adj.r2, adj.r2_clim, adj.r2_lc,
+            var.imp.ratio, ACAD.ind, Trophic.Niche,
+            hand.wing.ind, sauer.trend))
+
+anova.pc <- aov(residuals ~ ., data = anova.data)
+summary(anova.pc)
+
+anova.pc <- aov(residuals ~ Trophic.Level*diet.breadth, data = anova.data)
+summary(anova.pc)
+
+anova.pc <- aov(residuals ~ diet.breadth*hab.breadth + 
+                  rel_brain_size*tot.innov + GenLength*Clutch.Bird +.,
+                data = anova.data)
+
+summary(anova.pc)
 
 # ========== Old ----
 # ---- LM function ----

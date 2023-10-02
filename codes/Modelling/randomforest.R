@@ -5,11 +5,126 @@
 
 # ---- libraries ---- 
 library(tidyverse)
-library(party)
-library(varImp)
+# library(party)
+# library(varImp)
+library(e1071)
+library(randomForest)
+library(progress)
+library(caret)
 
 # library(randomForest)
 
+# ---- training and testing data ----
+
+bbs.t1 <- BBS_bioclim %>% filter(year == 2001)
+
+birds <- unique(bbs.t1$animal_jetz)
+
+train_tib_occ <- tibble()
+test_tib_occ <- tibble()
+
+train_tib_abs <- tibble()
+test_tib_abs <- tibble()
+
+set.seed(123)
+
+for(bird in birds){
+  
+  bbs.tmp <- bbs.t1 %>% filter(animal_jetz %in% bird)
+  
+  bbs.occ <- bbs.tmp %>% filter(abund.geom.mean > 0)
+  
+  inTraining.occ <- createDataPartition(bbs.occ$animal_jetz, p = 0.85, list = F)
+  training.occ <- bbs.occ[inTraining.occ, ]
+  testing.occ <- bbs.occ[-inTraining.occ, ]
+  
+  train_tib_occ <- bind_rows(train_tib_occ, training.occ)
+  test_tib_occ <- bind_rows(test_tib_occ, testing.occ)
+  
+  bbs.abs <- bbs.tmp %>% filter(abund.geom.mean == 0)
+  
+  inTraining.abs <- createDataPartition(bbs.abs$animal_jetz, p = 0.85, list = F)
+  training.abs <- bbs.abs[inTraining.abs, ]
+  testing.abs <- bbs.abs[-inTraining.abs, ]
+  
+  train_tib_abs <- bind_rows(train_tib_abs, training.abs)
+  test_tib_abs <- bind_rows(test_tib_abs, testing.abs)
+  
+}
+
+train_tib <- bind_rows(train_tib_occ, train_tib_abs)
+
+test_tib <- bind_rows(test_tib_occ, test_tib_abs)
+
+test_tib <- test_tib %>% mutate(PA = ifelse(abund.geom.mean > 0, 1, 0)) %>%
+  relocate(PA, .after = abund.geom.mean) %>%
+  group_by(animal_jetz) %>%
+  mutate(n_obs = n(),
+         n_obs_occ = sum(abund.geom.mean > 0)) %>%
+  arrange(animal_jetz)
+
+train_tib <- train_tib %>% mutate(PA = ifelse(abund.geom.mean > 0, 1, 0)) %>%
+  relocate(PA, .after = abund.geom.mean)  %>%
+  group_by(animal_jetz) %>%
+  mutate(n_obs = n(),
+         n_obs_occ = sum(abund.geom.mean > 0)) %>%
+  arrange(animal_jetz)
+
+
+rm(training.abs, training.occ, testing.abs, testing.occ, bird,
+   inTraining.abs, inTraining.occ, bbs.tmp, test_tib_abs, test_tib_occ,
+   train_tib_abs, train_tib_occ, bbs.abs, bbs.occ)
+
+# ---- abundance based RF ----
+
+trControl <- trainControl(method = "cv",
+                          number = 10,
+                          search = "grid")
+
+
+# --- find best mtry for each bird
+
+tuneGrid <- expand.grid(.mtry = c(1: 10))
+
+rf.mtry <- list()
+
+set.seed(123)
+
+pb <- progress_bar$new(
+  format = "[:bar] :percent | ETA: :eta",
+  total = length(birds),
+  clear = FALSE
+)
+
+for(bird in birds){
+  
+  pb$tick()
+  
+  train.tmp <- train_tib %>% filter(animal_jetz %in% bird) %>%
+    select(-c(PA, n_obs, n_obs_occ, year, segment))
+    
+  rf.tmp <- train(abund.geom.mean ~.,
+                  data = train.tmp[2:10],
+                  method = "rf",
+                  trControl = trControl,
+                  tuneGrid = tuneGrid,
+                  metric = "RMSE",
+                  ntree = 500,
+                  nodesize = 14)
+  
+  rf.mtry[[bird]] <- rf.tmp
+  
+}
+
+
+# ---- find best maxnodes
+
+# ---- find best ntree
+
+
+# ---- PA based RF ----
+
+# ==== OLD ----
 # ---- load data ----
 
 load("data/Climate/climate_df.rda")
@@ -407,28 +522,20 @@ res_tib <- tibble(bird = birds,
 library(caret)
 library(randomForest)
 
-
-# Define the number of blocks per species
-num_blocks_per_species <- 10
-
-# Initialize a list to store the blocks
-blocks_to_omit <- list()
-
-# Group the data by 'species'
-species_groups <- BBS_bioclim_t1 %>% group_by(animal_jetz)
+bbs.dat <- BBS_bioclim %>% filter(year == 2001)
+birds <- unique(bbs.dat$animal_jetz)
 
 # Create 10 blocks for each species
-for (species_group in unique(BBS_bioclim_t1$animal_jetz)) {
-  group_data <- filter(species_groups, animal_jetz == species_group)
+
+train.index.list <- list()
+
+for (bird in birds) {
   
-  # Create block indices
-  block_indices <- split(sample(1:nrow(group_data)), 1:num_blocks_per_species)
+  bbs.tmp <- filter(bbs.dat, animal_jetz == species_group)
   
-  # Create blocks for the current species
-  blocks <- lapply(block_indices, function(indices) group_data[indices, ])
+  train.index <- groupKFold(bbs.tmp, k = 0.2*length(bbs.tmp))
   
-  # Append the blocks to the list
-  blocks_to_omit[[as.character(species_group)]] <- blocks
+  train.index.list[[bird]] <- train.index
 }
 
 
@@ -449,48 +556,52 @@ best_mtry <- NULL  # Initialize the best mtry
 best_nt <- NULL    # Initialize the best number of trees
 best_adj_r2 <- -Inf  # Initialize the best adjusted R-squared
 
-for (block_to_omit in 1:num_blocks) {
-  # Create a subset of your data, omitting the block_to_omit
-  subset_data <- your_data[your_data$block_column != block_to_omit, ]
+for(bird in birds){
   
-  # Initialize a flag to check for improvement in adjusted R-squared
-  improvement_threshold <- 0.01  # 1% improvement threshold
-  improvement <- TRUE
+  bbs.tmp <- bbs.dat %>% filter(animal_jetz == "bird")
   
-  while (improvement) {
-    # Define the formula
-    # formula <- abund.geom.mean ~ predictor1 + predictor2 + ...
+  for (block_to_omit in 1:num_blocks) {
+    # Create a subset of your data, omitting the block_to_omit
+    subset_data <- bbs.tmp[bbs.tmp$block_column != block_to_omit, ]
     
-    # Train the Random Forest model for the current mtry and nt values
-    rf_model <- train(
-      abund.geom.mean ~.,
-      data = subset_data,
-      method = "rf",         # Specify Random Forest as the method
-      trControl = rf_control,  # Use the control parameters defined earlier
-      tuneGrid = data.frame(mtry = best_mtry, ntree = nt)
-    )
+    # Initialize a flag to check for improvement in adjusted R-squared
+    improvement_threshold <- 0.01  # 1% improvement threshold
+    improvement <- TRUE
     
-    # Calculate adjusted R-squared
-    adj_r2 <- summary(rf_model$finalModel)$adj.r.squared
-    
-    # Check for improvement in adjusted R-squared
-    improvement <- adj_r2 - best_adj_r2 > improvement_threshold
-    
-    if (improvement) {
-      # Update the best values
-      best_mtry <- rf_model$bestTune$mtry
-      best_nt <- nt
-      best_adj_r2 <- adj_r2
+    while (improvement) {
+      # Define the formula
+      # formula <- abund.geom.mean ~ predictor1 + predictor2 + ...
       
-      # Add 500 trees to the model
-      nt <- nt + 500
+      # Train the Random Forest model for the current mtry and nt values
+      rf_model <- train(
+        abund.geom.mean ~.,
+        data = subset_data,
+        method = "rf",         # Specify Random Forest as the method
+        trControl = rf_control,  # Use the control parameters defined earlier
+        tuneGrid = data.frame(mtry = best_mtry, ntree = nt)
+      )
+      
+      # Calculate adjusted R-squared
+      adj_r2 <- summary(rf_model$finalModel)$adj.r.squared
+      
+      # Check for improvement in adjusted R-squared
+      improvement <- adj_r2 - best_adj_r2 > improvement_threshold
+      
+      if (improvement) {
+        # Update the best values
+        best_mtry <- rf_model$bestTune$mtry
+        best_nt <- nt
+        best_adj_r2 <- adj_r2
+        
+        # Add 500 trees to the model
+        nt <- nt + 500
+      }
     }
+    
+    # Print or store any relevant information about the best model and iteration
+    print(paste("Iteration", block_to_omit, "- mtry:", best_mtry, "- nt:", best_nt, "- Adj.R-squared:", best_adj_r2))
   }
-  
-  # Print or store any relevant information about the best model and iteration
-  print(paste("Iteration", block_to_omit, "- mtry:", best_mtry, "- nt:", best_nt, "- Adj.R-squared:", best_adj_r2))
 }
-
 
 final_rf_models <- list()
 
