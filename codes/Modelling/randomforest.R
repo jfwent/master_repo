@@ -5,14 +5,16 @@
 
 # ---- libraries ---- 
 library(tidyverse)
-# library(party)
-# library(varImp)
-library(e1071)
 library(randomForest)
 library(progress)
 library(caret)
 
-# library(randomForest)
+# library(foreach)
+# library(doParallel)
+
+# library(party)
+# library(e1071)
+# library(varImp)
 
 # ---- training and testing data ----
 
@@ -77,18 +79,122 @@ rm(training.abs, training.occ, testing.abs, testing.occ, bird,
 
 # ---- abundance based RF ----
 
+# # ---- parallel ----
+# 
+# num_cores <- detectCores() - 4  # Adjust as needed
+# cl <- makeCluster(num_cores)
+# registerDoParallel(cl)
+# 
+# # --- find best mtry for each bird
+# 
+# tuneGrid <- expand.grid(
+#   mtry = c(1: 10)#,
+#   # ntree = c(300:1500),
+#   # nodesize = c(3:25)
+# )
+# 
+# trControl <- trainControl(method = "cv",
+#                           number = 10,
+#                           search = "grid",
+#                           allowParallel = T)
+# 
+# set.seed(123)
+# 
+# pb <- progress_bar$new(
+#   format = "[:bar] :percent | ETA: :eta",
+#   total = length(birds),
+#   clear = FALSE
+# )
+# 
+# rf.models <- foreach(bird = birds, .combine = "list") %dopar% {
+#   
+#   train.tmp <- train_tib |>
+#     dplyr::filter(animal_jetz %in% bird) |>
+#     dplyr::select(-c(PA, n_obs, n_obs_occ, year, segment))
+#   
+#   rf.tmp <- caret::train(
+#     abund.geom.mean ~ .,
+#     data = train.tmp[2:10],
+#     method = "rf",
+#     trControl = trControl,
+#     tuneGrid = tuneGrid,
+#     metric = "RMSE"
+#   )
+#   
+#   pb$tick()
+#   
+#   return(list(bird = bird, model = rf.tmp))
+# }
+# 
+# stopCluster(cl)
+# 
+# unregister_dopar <- function() {
+#   env <- foreach:::.foreachGlobals
+#   rm(list=ls(name=env), pos=env)
+# }
+# 
+# 
+# unregister_dopar()
+
+# ---- not parallel ----
+
+# --- find best mtry 
+
+tuneGrid <- expand.grid(
+  mtry = c(1: 8)
+)
+
 trControl <- trainControl(method = "cv",
                           number = 10,
                           search = "grid")
 
+# rf.mtry <- list()
 
-# --- find best mtry for each bird
+pb <- progress_bar$new(
+  format = "[:bar] :percent | ETA: :eta",
+  total = length(birds),
+  clear = FALSE
+)
 
-tuneGrid <- expand.grid(.mtry = c(1: 10))
+for(bird in birds){
 
-rf.mtry <- list()
+  pb$tick()
 
-set.seed(123)
+  train.tmp <- train_tib %>% filter(animal_jetz %in% bird) %>%
+    select(-c(PA, n_obs, n_obs_occ, year, segment))
+
+  rf.tmp <- train(abund.geom.mean ~.,
+                  data = train.tmp[2:10],
+                  method = "rf",
+                  trControl = trControl,
+                  tuneGrid = tuneGrid,
+                  metric = "RMSE",
+                  ntree = 500,
+                  nodesize = 14)
+
+  rf.mtry[[bird]] <- rf.tmp
+
+}
+
+best_mtry <- lapply(rf.mtry, function(model) {
+  model$bestTune$mtry
+})
+
+tuning_params <- tibble(bird = names(best_mtry),
+                        mtry = unlist(best_mtry))
+
+# ---- find best maxnodes
+
+
+# tuneGrid <- expand.grid(
+#   mtry = c(1: 10)
+# )
+
+trControl <- trainControl(method = "cv",
+                          number = 10,
+                          search = "grid")
+
+maxnodes_mods <- list()
 
 pb <- progress_bar$new(
   format = "[:bar] :percent | ETA: :eta",
@@ -102,25 +208,243 @@ for(bird in birds){
   
   train.tmp <- train_tib %>% filter(animal_jetz %in% bird) %>%
     select(-c(PA, n_obs, n_obs_occ, year, segment))
+  
+  mtry.best <- tuning_params$mtry[which(tuning_params$bird == bird)]
+  
+  store_maxnode <- list()
+  
+  for(maxnodes.it in 10:20){
     
-  rf.tmp <- train(abund.geom.mean ~.,
-                  data = train.tmp[2:10],
-                  method = "rf",
-                  trControl = trControl,
-                  tuneGrid = tuneGrid,
-                  metric = "RMSE",
-                  ntree = 500,
-                  nodesize = 14)
+    set.seed(123)
+    
+    rf_maxnode <- train(abund.geom.mean ~.,
+                    data = train.tmp[2:10],
+                    method = "rf",
+                    trControl = trControl,
+                    tuneGrid = expand.grid(mtry = mtry.best),
+                    metric = "RMSE",
+                    ntree = 500,
+                    nodesize = 14,
+                    maxnodes = maxnodes.it)
+    
+    current_iteration <- toString(maxnodes.it)
+    store_maxnode[[current_iteration]] <- rf_maxnode
+    
+  }
   
-  rf.mtry[[bird]] <- rf.tmp
-  
+  maxnodes_mods[[bird]] <- store_maxnode
 }
 
+best_models <- list()
 
-# ---- find best maxnodes
+maxnodes_tib <- tibble()
+
+# Iterate through the list of entries (each entry represents a bird species)
+for (entry in maxnodes_mods) {
+  best_maxnodes <- NULL
+  best_r_squared <- Inf
+  
+  # Iterate through the models within each entry
+  for (maxnodes in 10:20) {  # Adjust the range as needed
+    model <- entry[[toString(maxnodes)]]
+    r_squared <- 1 - model$results$RMSE^2
+    
+    # Check if this model has a lower R-squared value
+    if (r_squared < best_r_squared) {
+      best_maxnodes <- maxnodes
+      best_r_squared <- r_squared
+    }
+  }
+  
+  new_entry <- tibble(maxnodes = best_maxnodes)
+  maxnodes_tib <- bind_rows(maxnodes_tib, new_entry)
+}
+
+tuning_params <- tibble(bird = names(best_mtry),
+                        mtry = unlist(best_mtry),
+                        maxnodes = maxnodes_tib$maxnodes)
+
+rm(best_maxnodes, best_r_squared, bird, maxnodes, maxnodes.it, mtry.best, r_squared, current_iteration,
+   store_maxnode, rf.tmp, rf_maxnode, new_entry, pb, best_models, best_model, train.tmp, maxnodes_tib, model)
 
 # ---- find best ntree
 
+trControl <- trainControl(method = "cv",
+                          number = 10,
+                          search = "grid")
+
+maxtrees_mods <- list()
+
+pb <- progress_bar$new(
+  format = "[:bar] :percent | ETA: :eta",
+  total = length(birds),
+  clear = FALSE
+)
+
+for(bird in birds){
+  
+  pb$tick()
+  
+  train.tmp <- train_tib %>% filter(animal_jetz %in% bird) %>%
+    select(-c(PA, n_obs, n_obs_occ, year, segment))
+  
+  mtry.best <- tuning_params$mtry[which(tuning_params$bird == bird)]
+  
+  maxnodes.best <- tuning_params$maxnodes[which(tuning_params$bird == bird)]
+  
+  store_maxtrees <- list()
+  
+  for(maxtrees.it in c(250, 300, 350, 400, 450, 500, 550, 600, 800, 1000, 2000)){
+    
+    set.seed(123)
+    
+    rf_maxtrees <- train(abund.geom.mean ~.,
+                        data = train.tmp[2:10],
+                        method = "rf",
+                        trControl = trControl,
+                        tuneGrid = expand.grid(mtry = mtry.best),
+                        metric = "RMSE",
+                        ntree = maxtrees.it,
+                        nodesize = 14,
+                        maxnodes = maxnodes.best)
+    
+    key <- toString(maxtrees.it)
+    store_maxtrees[[key]] <- rf_maxtrees
+    
+  }
+  
+  maxtrees_mods[[bird]] <- store_maxtrees
+}
+
+maxtrees_tib <- tibble()
+
+# Iterate through the list of entries (each entry represents a bird species)
+for (entry in maxtrees_mods) {
+  best_maxtrees <- NULL
+  best_r_squared <- Inf
+  
+  # Iterate through the models within each entry
+  for (maxtrees in c(250, 300, 350, 400, 450, 500, 550, 600, 800, 1000, 2000)) {  # Adjust the range as needed
+    model <- entry[[toString(maxtrees)]]
+    r_squared <- 1 - model$results$RMSE^2
+    
+    # Check if this model has a lower R-squared value
+    if (r_squared < best_r_squared) {
+      best_maxtrees <- maxtrees
+      best_r_squared <- r_squared
+    }
+  }
+  
+  new_entry <- tibble(maxtrees = best_maxtrees)
+  maxtrees_tib <- bind_rows(maxtrees_tib, new_entry)
+}
+
+tuning_params <- tibble(bird = names(best_mtry),
+                        mtry = unlist(best_mtry),
+                        maxnodes = maxnodes_tib$maxnodes,
+                        maxtrees = maxtrees_tib$maxtrees)
+
+save(tuning_params, file = "data/abund_rf_tuning_params.rda")
+
+# --- final model 
+
+load("data/abund_rf_tuning_params.rda")
+
+pb <- progress_bar$new(
+  format = "[:bar] :percent | ETA: :eta",
+  total = length(birds),
+  clear = FALSE
+)
+
+trControl <- trainControl(method = "cv",
+                          number = 10,
+                          search = "grid")
+
+rf_final_mods <- list()
+
+for(bird in birds){
+  
+  pb$tick()
+
+  train.tmp <- train_tib %>% filter(animal_jetz %in% bird) %>%
+    select(-c(PA, n_obs, n_obs_occ, year, segment))
+  
+  mtry.best <- tuning_params$mtry[which(tuning_params$bird == bird)]
+  maxnodes.best <- tuning_params$maxnodes[which(tuning_params$bird == bird)]
+  maxtrees.best <- tuning_params$maxtrees[which(tuning_params$bird == bird)]
+  
+  rf.final <- train(abund.geom.mean ~.,
+                  data = train.tmp[2:10],
+                  method = "rf",
+                  trControl = trControl,
+                  tuneGrid = expand.grid(mtry = mtry.best),
+                  metric = "RMSE",
+                  ntree = maxtrees.best,
+                  nodesize = 14,
+                  maxnodes = maxnodes.best)
+  
+  rf_final_mods[[bird]] <- rf.final
+  
+}
+
+rsquared <- lapply(rf_final_mods, function(model) {
+  model$results$Rsquared
+})
+
+rsquared <- lapply(rf_final_mods, function(model) {
+  model$results$Rsquared
+})
+
+rsquared <- unlist(rsquared)
+
+mean(rsquared)
+median(rsquared)
+sd(rsquared)
+
+# --- test models ---
+
+predictions <- list()
+
+birds <- names(rf_final_mods)
+
+for(bird in birds){
+  
+  bird.ind <- which(birds == bird)
+  
+  model.tmp <- rf_final_mods[[bird.ind]]
+  
+  test.tmp <- test_tib %>% filter(animal_jetz %in% bird) %>%
+    select(-c(PA, n_obs, n_obs_occ, year, segment))
+  
+  prediction <- predict(model.tmp, test.tmp[3:10])
+  
+  predictions[[bird]] <- prediction
+}
+
+rmse_results <- list()
+rsquared_results <- list()
+
+for (bird in birds) {
+  # Extract the predictions and test data for the current bird
+  prediction <- predictions[[bird]]
+  test_data <- test_tib %>%
+    filter(animal_jetz %in% bird) %>%
+    select(-c(PA, n_obs, n_obs_occ, year, segment)) %>%
+    pull(abund.geom.mean)  # Assuming the true values are in the 'abund.geom.mean' column
+  
+  # Calculate RMSE
+  rmse <- sqrt(mean((test_data - prediction)^2))
+  rmse_results[[bird]] <- rmse
+  
+  # Calculate R-squared
+  rsquared <- 1 - sum((test_data - prediction)^2) / sum((test_data - mean(test_data))^2)
+  rsquared_results[[bird]] <- rsquared
+}
+
+
+res_tib <- tibble(birds = names(rmse_results),
+                  rmse = unlist(rmse_results),
+                  r2 = unlist(rsquared_results))
 
 # ---- PA based RF ----
 
