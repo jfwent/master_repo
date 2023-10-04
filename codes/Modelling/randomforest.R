@@ -19,6 +19,7 @@ library(caret)
 # ---- training and testing data ----
 
 bbs.t1 <- BBS_bioclim %>% filter(year == 2001)
+bbs.t2 <- BBS_bioclim %>% filter(year == 2019)
 
 birds <- unique(bbs.t1$animal_jetz)
 
@@ -346,7 +347,7 @@ tuning_params <- tibble(bird = names(best_mtry),
 
 save(tuning_params, file = "data/abund_rf_tuning_params.rda")
 
-# --- final model 
+# --- final model ----
 
 load("data/abund_rf_tuning_params.rda")
 
@@ -401,7 +402,7 @@ mean(rsquared)
 median(rsquared)
 sd(rsquared)
 
-# --- test models ---
+# --- test models ----
 
 predictions <- list()
 
@@ -446,7 +447,98 @@ res_tib <- tibble(birds = names(rmse_results),
                   rmse = unlist(rmse_results),
                   r2 = unlist(rsquared_results))
 
+rm(bird, bird.ind, maxnodes.best, maxtrees.best, mtry.best, rmse_results, rsquared_results,
+   test.tmp, train.tmp, trControl, prediction, rmse, rsquared, test_data, rf.final, pb, model.tmp)
+
+# ---- predict T2 ----
+
+predictions.t2 <- tibble(animal_jetz = character(),
+                         segment = character(),
+                         predictions = numeric())
+
+birds <- names(rf_final_mods)
+
+bbs.t2 <- bbs.t2 %>%
+  group_by(animal_jetz) %>%
+  mutate(n_obs = n(),
+         n_obs_occ = sum(abund.geom.mean > 0)) %>%
+  arrange(animal_jetz) 
+
+for(bird in birds){
+  
+  bird.ind <- which(birds == bird)
+  
+  model.tmp <- rf_final_mods[[bird.ind]]
+  
+  bbs.t2.tmp <- bbs.t2 %>% filter(animal_jetz %in% bird) %>%
+    select(-c(n_obs, n_obs_occ, year))
+  
+  prediction <- predict(model.tmp, bbs.t2.tmp[4:11])
+  
+  new_entry = tibble(animal_jetz = bird,
+                     segment = bbs.t2.tmp$segment,
+                     predictions = prediction)
+  
+  predictions.t2 <- bind_rows(predictions.t2, new_entry)
+}
+
+bbs.t2.tmp <- bbs.t2 %>%
+  select(segment, animal_jetz, abund.geom.mean) %>%
+  arrange(animal_jetz) %>%
+  left_join(predictions.t2, by = c("animal_jetz", "segment")) %>%
+  mutate(abund = as.integer(abund.geom.mean),
+         pred = as.integer(predictions)) %>%
+  rowwise() %>%
+  mutate(diff.pred = pred - abund)
+
+bbs.t2.preds <- bbs.t2.tmp %>%
+  group_by(animal_jetz) %>%
+  summarize(mean_pred = mean(predictions),
+            med_pred = median(predictions),
+            mean_diff_pred = mean(diff.pred),
+            med_diff_pred = median(diff.pred),
+            sd_diff_pred = sd(diff.pred),
+            n_corr = length(diff.pred)/sum(diff.pred == 0)) %>%
+  na.omit() %>%
+  left_join(median.d.abund.min40, by = "animal_jetz")%>%
+  left_join(species.traits, by = "animal_jetz")
+
+ggplot(bbs.t2.preds, aes(y = med_pred, x = median.d.abund)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(bbs.t2.preds, aes(y = mean_pred, x = median.d.abund)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(bbs.t2.preds, aes(y = mean_pred, x = sauer.trend)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(bbs.t2.preds, aes(y = mean_pred, x = ACAD.ind, group = ACAD.ind)) +
+  geom_boxplot()
+
+ggplot(bbs.t2.preds, aes(y = mean_diff_pred, x = sauer.trend)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(bbs.t2.preds, aes(y = mean_diff_pred, x = ACAD.ind, group = ACAD.ind)) +
+  geom_boxplot()
+
+ggplot(bbs.t2.preds, aes(y = mean_diff_pred, x = median.d.abund)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(bbs.t2.preds, aes(y = mean_diff_pred, x = sauer.trend)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(bbs.t2.preds, aes(y = mean_diff_pred, x = ACAD.ind, group = ACAD.ind)) +
+  geom_boxplot()
+
 # ---- PA based RF ----
+
+
 
 # ==== OLD ----
 # ---- load data ----

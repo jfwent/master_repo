@@ -6,6 +6,7 @@
 library(tidyverse)
 library(patchwork)
 library(ggplot2)
+# library(MASS)
 
 # ==== with land cover vars -----
 # ---- LM function -----
@@ -19,12 +20,18 @@ lc_vars <- colnames(abund.min40.lc[12:19])
 adj_r2_lc <- tibble(bird = character(),
                      adj.r2 = numeric())
 
-var.imp.lc <- tibble(bird = character(),
-                      var.imp.ratio = numeric(),
-                      variables = character(),
-                      var.imps = numeric())
+coefs_tib <- tibble(bird = character(),
+                    variable = character(),
+                    beta.coefs = numeric())
+
+# var.imp.lc <- tibble(bird = character(),
+#                       var.imp.ratio = numeric(),
+#                       variables = character(),
+#                       var.imps = numeric())
 
 full_mods.lc <- list()
+
+set.seed(123)
 
 for(bird.ind in birds){
   
@@ -35,8 +42,11 @@ for(bird.ind in birds){
     tibble::rowid_to_column(., "ID")
   
   all.predictors <- vars.all
+  
   lc.predictors <- lc_vars
+  
   clim.predictors <- clim_vars
+  
   response <- "delta.abund"
   
   all.bird_data <- bird.tmp[, c(all.predictors, response)]
@@ -45,17 +55,20 @@ for(bird.ind in birds){
   
   clim.bird_data <- bird.tmp[, c(clim.predictors, response)]
   
-  train_control <- caret::trainControl(method = "cv", number = 10)
+  train_control <- caret::trainControl(method = "repeatedcv", number = 10, repeats = 10)
   
   tryCatch({
     full.lm_model <- caret::train(
       delta.abund~.,
       data = all.bird_data,
-      method = "lm",
-      trControl = train_control
+      method = "lmStepAIC",
+      trControl = train_control,
+      preProcess = c("center", "scale", "zv"),
+      trace = F
     )
     
     adj.r2.full <- summary(full.lm_model$finalModel)$r.squared
+    coefs.full <- coefficients(full.lm_model$finalModel)
   }, warning = function(w){
     cat("Warning encountered for bird", bird.ind, "during full model training:", conditionMessage(w), "\n")
   }
@@ -65,8 +78,10 @@ for(bird.ind in birds){
     lc.lm_model <- caret::train(
       delta.abund~.,
       data = lc.bird_data,
-      method = "lm",
-      trControl = train_control
+      method = "lmStepAIC",
+      trControl = train_control,
+      preProcess = c("center", "scale", "zv"),
+      trace = F
     )
     
     adj.r2.lc <- summary(lc.lm_model$finalModel)$r.squared
@@ -79,8 +94,10 @@ for(bird.ind in birds){
     clim.lm_model <- caret::train(
       delta.abund~.,
       data = clim.bird_data,
-      method = "lm",
-      trControl = train_control
+      method = "lmStepAIC",
+      trControl = train_control,
+      preProcess = c("center", "scale", "zv"),
+      trace = F
     )
     
     adj.r2.clim <- summary(clim.lm_model$finalModel)$r.squared
@@ -89,132 +106,199 @@ for(bird.ind in birds){
   }
   )
   
-  residuals.now <- adj.r2.full - (adj.r2.clim + adj.r2.lc)
+  # residuals.now <- adj.r2.full - (adj.r2.clim + adj.r2.lc)
   
   new_row1 <- tibble(bird = bird.ind,
                      adj.r2 = adj.r2.full,
                      adj.r2_clim = adj.r2.clim,
                      adj.r2_lc = adj.r2.lc,
-                     residuals = residuals.now)
+                     # residuals = residuals.now
+                     )
   
   adj_r2_lc <- bind_rows(adj_r2_lc, new_row1)
   
+  new_row2 <- tibble(bird = bird.ind,
+                     variable = names(coefs.full),
+                     beta.coefs = coefs.full)
+  
+  coefs_tib <- bind_rows(coefs_tib, new_row2)
+  
   full_mods.lc[[bird.ind]] <- full.lm_model
   
-  varImp.full <- caret::varImp(full.lm_model)$importance
   
-  var.imp.adj <- varImp.full/sum(varImp.full)
-  
-  clim.imp <- sum(var.imp.adj[1:8,])
-  
-  lc.imp <- sum(var.imp.adj[9:12,])
-  
-  var.imp.ratio <- clim.imp/lc.imp
-  
-  new_entry_var.imp <- tibble(bird = bird.ind,
-                              var.imp.ratio = var.imp.ratio,
-                              variables = rownames(var.imp.adj),
-                              var.imps = var.imp.adj[,1])
-  
-  var.imp.lc <- bind_rows(var.imp.lc, new_entry_var.imp)
+  # varImp.full <- caret::varImp(full.lm_model)$importance
+  # 
+  # var.imp.adj <- varImp.full/sum(varImp.full)
+  # 
+  # clim.imp <- sum(var.imp.adj[1:8,])
+  # 
+  # lc.imp <- sum(var.imp.adj[9:12,])
+  # 
+  # var.imp.ratio <- clim.imp/lc.imp
+  # 
+  # new_entry_var.imp <- tibble(bird = bird.ind,
+  #                             var.imp.ratio = var.imp.ratio,
+  #                             variables = rownames(var.imp.adj),
+  #                             var.imps = var.imp.adj[,1])
+  # 
+  # var.imp.lc <- bind_rows(var.imp.lc, new_entry_var.imp)
 }
 
-rm(all.bird_data, bird.tmp, clim.bird_data, clim.lm_model, full.lm_model, lc.bird_data,
-   lc.lm_model, new_entry_var.imp, new_row1, train_control, var.imp.adj, varImp.full,
-   adj.r2.clim, adj.r2.full, adj.r2.lc, all.predictors, bird.ind, birds, clim_vars, clim.imp, clim.predictors,
-   lc_vars, lc.imp, lc.predictors, residuals.now, response, var.imp.ratio, vars.all)
+rm(all.bird_data, bird.tmp, clim.bird_data, clim.lm_model, coefs.full,
+   full.lm_model, lc.bird_data,
+   lc.lm_model,
+   # new_entry_var.imp,
+   new_row1, new_row2, train_control,
+   # var.imp.adj, varImp.full,
+   adj.r2.clim, adj.r2.full, adj.r2.lc, all.predictors, bird.ind, birds, clim_vars,
+   # clim.imp,
+   clim.predictors,
+   lc_vars,
+   # lc.imp,
+   lc.predictors,
+   # residuals.now,
+   response,
+   # var.imp.ratio,
+   vars.all,
+   var.imp.lc)
 
-# wrning_birds <- c("Catharus_guttatus", "Catharus_ustulatus",
-#                   "Dendroica_coronata", "Dendroica_virens", "Junco_hyemalis",
-#                   "Myiarchus_cinerascens", "Piranga_ludoviciana", "Zonotrichia_albicollis")
-# 
-# t <- abund.min40.lc %>%
-#   filter(animal_jetz %in% wrning_birds) %>%
-#   group_by(animal_jetz) %>%
-#   mutate(n_entries = n())
-# 
-# unique(t$n_entries)
+save(coefs_tib, file = "results/beta_coefficienst_LMs.rda")
+save(adj_r2_lc, file = "results/r2s_LMs.rda")
 
 # ---- species traits data ----
+
+load("results/r2s_LMs.rda")
+load("results/beta_coefficienst_LMs.rda")
+
+adj_r2_lc <- adj_r2_lc %>%
+  distinct()
+
+coefs_tib <- coefs_tib %>%
+  distinct()
 
 load("data/species_traits.rda")
 
 species.traits <- species.traits %>%
   rename(bird =  animal_jetz) %>%
-  select(-c(Common.Name, tot_diet_div, shannon, Clutch))
+  dplyr::select(-c(Common.Name, tot_diet_div, shannon, Clutch))
 
 traits <- colnames(species.traits[2:14])
 
-adj_r2_lc_traits <- adj_r2_lc %>% left_join(species.traits, by = "bird") %>%
-  left_join(var.imp.lc, by = "bird") %>%
+# adj_r2_lc <- adj_r2_lc %>%
+#   pivot_longer(!bird, names_to = "model_type", values_to = "r2s")
+# 
+# adj_r2_lc <- adj_r2_lc %>%
+#   pivot_wider(names_from = "model_type", values_from = "r2s")
+
+adj_r2_lc_traits <- adj_r2_lc %>%
+  # left_join(coefs_tib, by = "bird") %>%
+  left_join(species.traits, by = "bird") %>%
   mutate(na.num = rowSums(is.na(.))) %>%
   filter(na.num != 13) %>%
-  select(-na.num) %>%
-  select(-variables, -var.imps) %>%
-  distinct() #%>%
-  # na.omit()
+  dplyr::select(-na.num) %>%
+  distinct()
+
+# ---- r2 plots ----
+
+adj_r2_lc <- adj_r2_lc %>%
+  rowwise() %>%
+  mutate(v.clim = adj.r2 - adj.r2_lc,
+         v.lc = adj.r2 - adj.r2_clim,
+         v.joint = adj.r2 - (adj.r2_lc + adj.r2_clim))
+
+adj_r2_lc %>%
+  dplyr::select(-c(adj.r2, adj.r2_clim, adj.r2_lc)) %>%
+  pivot_longer(!bird, names_to = "var.type", values_to = "r2s") %>%
+  ggplot(aes(y = r2s, x = bird, fill = "var.type")) +
+  geom_bar(position = "stack", stat = "identity") +
+  viridis::scale_fill_viridis(discrete = T, option = "A") +
+  xlab("Birds") +
+  theme(axis.text.x = element_text(angle= 60, size = 5))
+
+ttt <- adj_r2_lc %>%
+  mutate(mean_vclim = mean(v.clim),
+         mean_vlc = mean(v.lc),
+         mean_vjoint = mean(v.joint))
+
+ttt %>%
+  ggplot(aes(y = bird, x = r2s, fill = var.type)) +
+  geom_bar(position = "stack", stat = "identity") +
+  viridis::scale_fill_viridis(discrete = T, option = "F") +
+  ylab("Birds") +
+  theme(axis.text.y = element_text(size = 5))
+
+adj_r2_lc %>%
+  pivot_longer(!bird, names_to = "model_type", values_to = "r2s") %>%
+  ggplot(aes(x = model_type, y = r2s, group = model_type, fill = model_type)) +
+  geom_violin(alpha = 0.5) +
+  geom_boxplot(alpha = 0.5, width = 0.2) +
+  viridis::scale_fill_viridis(discrete = T, option = "inferno") +
+  stat_summary(fun.y=mean, geom="point", shape=20, size=3,
+               # color="red3", fill="red3",
+               alpha = 0.8) +
+  theme_minimal()
 
 # ---- continuous traits plots ----
 
-p1 <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = log(GenLength))) +
+p1 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = log(GenLength))) +
   geom_point(size = 2, alpha = 0.5) +
-  geom_smooth() +
+  geom_smooth(method = "lm") +
   # geom_abline() +
-  ylab("Residuals") +
+  # ylab("Residuals") +
   xlab("log(Generation length)")  +
   geom_hline(yintercept = 0, linetype = "dashed") #+
   # ylim(-0.1,0.1)
 
-p2 <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = Clutch.Bird)) +
+p2 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = Clutch.Bird)) +
   geom_point(size = 2, alpha = 0.5) +
-  geom_smooth()+
+  geom_smooth(method = "lm")+
   # geom_abline() +
   xlab("Clutch size") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") #+
   # ylim(-0.1,0.1)
 
-p3 <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = diet.breadth)) +
+p3 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = diet.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
-  geom_smooth() +
+  geom_smooth(method = "lm") +
   # geom_abline() +
   xlab("Diet breadth") +
   ylab("")  +
   geom_hline(yintercept = 0, linetype = "dashed") #+
   # ylim(-0.1,0.1)
 
-p4 <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = hab.breadth)) +
+p4 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = hab.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
-  geom_smooth()+
+  geom_smooth(method = "lm")+
   # geom_abline() +
   xlab("Habitat breadth") +
-  ylab("Residuals") +
+  # ylab("Residuals") +
   geom_hline(yintercept = 0, linetype = "dashed") #+
   # ylim(-0.1,0.1)
 
-p5 <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = log(body.mass))) +
+p5 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = log(body.mass))) +
   geom_point(size = 2, alpha = 0.5) +
-  geom_smooth()+
+  geom_smooth(method = "lm")+
   # geom_abline() +
   xlab("log(Body mass)") +
   ylab("") +
   geom_hline(yintercept = 0, linetype = "dashed") #+
   # ylim(-0.1,0.1)
 
-p6 <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = hand.wing.ind)) +
+p6 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = hand.wing.ind)) +
   geom_point(size = 2, alpha = 0.5) +
-  geom_smooth() +
+  geom_smooth(method = "lm") +
   # geom_abline() +
   xlab("Hand-wing index") +
-  ylab("Residuals")  +
+  # ylab("Residuals")  +
   geom_hline(yintercept = 0, linetype = "dashed") #+
   # ylim(-0.1, 0.1)
 
-p7 <- ggplot(adj_r2_lc_traits, aes(y = residuals, x = rel_brain_size)) +
+p7 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = rel_brain_size)) +
   geom_point(size = 2, alpha = 0.5) +
-  geom_smooth() +
+  geom_smooth(method = "lm") +
   xlab("Relative brain size") +
-  ylab("Residuals") +
+  # ylab("Residuals") +
   geom_hline(yintercept = 0, linetype = "dashed") #+
   # ylim(-0.1,0.1)
 
@@ -222,8 +306,8 @@ final_plot <- p1 + p2 + p3 + p4 + p5 + p6 + p7
 
 final_plot
 
-ggsave(filename = "figures/contin_traits_residuals_full_LM.png", plot = final_plot,
-       width = 8, height = 6, dpi = 300)
+# ggsave(filename = "figures/contin_traits_residuals_full_LM.png", plot = final_plot,
+#        width = 8, height = 6, dpi = 300)
 
 
 # ---- categorical traits ----
@@ -295,10 +379,13 @@ pop_trend
 ggsave(filename = "figures/pop_trend_residuals_full_LM.png", plot = pop_trend,
        width = 8, height = 6, dpi = 300)
 
+
+
+# ================ OLD 2 ----
 # ---- var.imp plot -----
 
 var.imp.ratio.lc <- ggplot(var.imp.lc, aes(y = reorder(bird, var.imp.ratio), x = var.imp.ratio,
-                       color = var.imp.ratio)) +
+                                           color = var.imp.ratio)) +
   geom_point(alpha = 0.5) +
   scale_color_gradient(low = "royalblue", high = "red") +
   geom_vline(xintercept = 1, linetype = "dashed", color = "grey60") +
@@ -884,7 +971,7 @@ anova.pc <- aov(residuals ~ diet.breadth*hab.breadth +
 
 summary(anova.pc)
 
-# ========== Old ----
+# ========== Old 1----
 # ---- LM function ----
 # formula_string <- paste("delta.abund ~", paste(vars, collapse = " + "))
 # formula_string <- as.formula(paste(formula_string, "+", paste("I(", vars, "^2)", collapse = " + ")))

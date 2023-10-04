@@ -5,13 +5,9 @@
 # ---- libraries -----
 
 library(tidyverse)
-# library(caret)
+library(caret)
 
 # ---- load data ----
-
-# load("data/d.abund.min6.rda")
-# load("data/d.abund.min10.rda")
-# load("data/d.abund.min40.rda")
 
 load("data/BBS.full.stable.min40.rda")
 load("data/BBS.full.stable.min10.rda")
@@ -103,20 +99,6 @@ lc.df <- land_use_area %>%
   )) %>%
   select(year, segment, contains("log"))
 
-# lc.df <- land_use_area %>%
-#   select(-c(ecoregion, tot.area.m2, route, barren.area.m2, wet.area.m2)) %>%
-#   mutate(PC1 = urban.high.area.m2 + urban.low.area.m2 + grass.area.m2 + pasture.area.m2,
-#          PC2 = forest.area.m2 + crop.area.m2) %>%
-#   select(-c(urban.high.area.m2, urban.low.area.m2,
-#             grass.area.m2, pasture.area.m2, forest.area.m2, crop.area.m2)) %>%
-#   mutate(across(
-#     .cols = contains("area") | contains("PC"),
-#     .fns = c(
-#       log = \(x) log(x + 900))
-#     ,
-#     .names = "{.col}.{.fn}"
-#   )) %>%
-#   select(year, segment, contains("log"))
 
 lc.t1 <- lc.df %>% filter(year == 2001) %>% select(-year)
 
@@ -152,7 +134,7 @@ d.abund.climate <- d.abund.min40 %>%
   select(-n_entries)
 
 #%>%
-  # mutate(delta.abund = as.integer(delta.abund))
+# mutate(delta.abund = as.integer(delta.abund))
 
 d.abund.lc <- d.abund.min40 %>%
   select(segment, animal_jetz, delta.abund) %>%
@@ -162,12 +144,12 @@ d.abund.lc <- d.abund.min40 %>%
   filter(n_entries >= 10) %>%
   select(-n_entries)
 #%>%
-  # mutate(delta.abund = as.integer(delta.abund))
+# mutate(delta.abund = as.integer(delta.abund))
 
 # ---- LM function ----
 
 fit_lm <- function(df, var) {
-  formula <- as.formula(paste("delta.abund ~", var, "+ I(", var, "^2)"))
+  
   model <- lm(formula, data = df)
   return(model)
 }
@@ -182,9 +164,9 @@ set.seed(123)
 num_folds <- 10
 
 clim_rmse <- tibble(bird = character(),
-                     variable = character(),
-                     mean_rmse = numeric(),
-                     n.folds = numeric())
+                    variable = character(),
+                    mean_rmse = numeric(),
+                    n.folds = numeric())
 
 r2.clim <- tibble(bird = character(),
                   variable = character(),
@@ -195,7 +177,10 @@ clim_mods <- list()
 significant_terms <- tibble(bird = character(),
                             variable = character(),
                             p.values = numeric()
-                            )
+)
+
+trControl <- trainControl(method = "cv",
+                          number = 10)
 
 for(variable.ind in climate_vars){
   
@@ -205,56 +190,37 @@ for(variable.ind in climate_vars){
   
   for(bird.ind in birds){
     bird.tmp <- d.abund.climate %>%
-      filter(animal_jetz == bird.ind) %>%
-      tibble::rowid_to_column(., "ID")
+      filter(animal_jetz == bird.ind)
     
-    full.mod <- fit_lm(bird.tmp, var = variable.ind)
+    full.mod <- train(as.formula(paste("delta.abund ~", variable.ind, "+ I(", variable.ind, "^2)")),
+                      data = bird.tmp[3:17],
+                      method = "lm",
+                      trControl = trControl)
     
     bird_mods[[bird.ind]] <- full.mod
     
-    p.val <- summary(full.mod)$coefficients[,4]
+    # p.val <- summary(full.mod)$coefficients[,4]
     
-    new_row <- tibble(bird = bird.ind,
-                      variable = names(p.val),
-                      p.values = p.val)
+    # new_row <- tibble(bird = bird.ind,
+    #                   variable = names(p.val),
+    #                   p.values = p.val)
+    # 
+    # significant_terms <- bind_rows(significant_terms, new_row)
     
-    significant_terms <- bind_rows(significant_terms, new_row)
-    
-    adj.r2.now <- summary(full.mod)$adj.r.squared
-    
-    folds <- caret::groupKFold(bird.tmp$segment, k = 10)
-    
-    rmse_values <- numeric(num_folds)
-    
-    for(n_fold in seq_along(folds)){
-      
-      bird.train <- bird.tmp %>%
-        filter(ID %in% folds[[n_fold]])
-      
-      bird.test <- bird.tmp %>%
-        filter(!(ID %in% folds[[n_fold]]))
-      
-      bird_model <- fit_lm(bird.train, variable.ind)
-      
-      predicted_values <- predict(bird_model, newdata = bird.test)
-      
-      rmse <- sqrt(mean((bird.train$delta.abund - predicted_values)^2))
-      
-      rmse_values[n_fold] <- rmse
-    }
+    # adj.r2.now <- summary(full.mod)$rsquared
     
     clim_mods[[variable.ind]] <- bird_mods
     
-    mean_rmse <- mean(rmse_values)
+    # mean_rmse <- mean(rmse_values)
     
-    new_row1 <- tibble(bird = bird.ind, variable = variable.ind,
-                       adj.r2 = adj.r2.now)
-    
-    new_row2 <- tibble(bird = bird.ind, mean_rmse = mean_rmse,
-                      variable = variable.ind, n.folds = length(folds))
-    
-    r2.clim <- bind_rows(r2.clim, new_row1)
-    clim_rmse <- bind_rows(clim_rmse, new_row2)
+    # new_row1 <- tibble(bird = bird.ind, variable = variable.ind,
+    #                    adj.r2 = adj.r2.now)
+    # 
+    # new_row2 <- tibble(bird = bird.ind, mean_rmse = mean_rmse,
+    #                    variable = variable.ind, n.folds = length(folds))
+    # 
+    # r2.clim <- bind_rows(r2.clim, new_row1)
+    # clim_rmse <- bind_rows(clim_rmse, new_row2)
   }
 }
 
@@ -280,13 +246,13 @@ land_use_vars <- colnames(d.abund.lc[4:13])
 num_folds <- 10
 
 lc_rmse <- tibble(bird = character(),
-                    variable = character(),
-                    mean_rmse = numeric(),
-                    n.folds = numeric())
+                  variable = character(),
+                  mean_rmse = numeric(),
+                  n.folds = numeric())
 
 r2.lc<- tibble(bird = character(),
-                  variable = character(),
-                  adj.r2 = numeric())
+               variable = character(),
+               adj.r2 = numeric())
 
 set.seed(123)
 
@@ -300,7 +266,7 @@ for(variable.ind in land_use_vars){
       filter(animal_jetz == bird.ind) %>%
       tibble::rowid_to_column(., "ID")
     
-    full.mod <- fit_lm(bird.tmp, var = variable.ind)
+    full.mod <- fit_lm(bird.tmp, var = land_use_vars)
     
     adj.r2.now <- summary(full.mod)$adj.r.squared
     
@@ -377,8 +343,6 @@ bp_rmse_clim <- clim_rmse %>%
     legend.key.width = unit(5, "mm"),
   )
 
-bp_rmse_clim
-
 bp_r2_clim <- r2.clim %>%
   ggplot2::ggplot(aes(y = variable, x = adj.r2, fill = variable)) +
   geom_boxplot(width = 0.3,
@@ -404,7 +368,7 @@ bp_r2_clim <- r2.clim %>%
   theme(
     # legend.key.size = unit(5, "mm"),
     legend.text = element_text(size = 7, color = "black"),
-    # legend.margin = margin(t=-0.6, unit = "cm"),
+    legend.margin = margin(t=-0.6, unit = "cm"),
     legend.position = "right",
     legend.key.width = unit(5, "mm"),
   )
