@@ -8,43 +8,26 @@ library(ggplot2)
 
 # ---- load data ----
 
-load("results/beta_coefficienst_LMs.rda")
-load("results/r2s_LMs.rda")
+load("results/adj_R2_trained_LMs.rda")
+load("results/beta_coefficients_full_LMs.rda")
 load("data/species_traits.rda")
 
+
+# --- prepare the data ----
+
+species.traits <- species.traits %>%
+  rename(bird =  animal_jetz) %>%
+  dplyr::select(-c(Common.Name, tot_diet_div, shannon, Clutch)) #%>%
+  # mutate(na.num = rowSums(is.na(.)))
+
+# traits <- colnames(species.traits[2:14])
+
+adj_r2_lc_traits <- adj_r2_lc %>%
+  left_join(species.traits, by = "bird") %>%
+  distinct()
+
+
 # ---- r2 plots ----
-
-ttt <-
-  adj_r2_lc %>%
-  dplyr::select(-c(adj.r2, adj.r2_clim, adj.r2_lc)) %>%
-  pivot_longer(!bird, names_to = "var.type", values_to = "r2s") %>%
-  group_by(var.type) %>%
-  summarize(r2s = mean(r2s)) %>%
-  mutate(bird = "Mean") %>%
-  relocate(bird)
-
-# All species
-all_species_stacked <-
-  adj_r2_lc %>%
-  dplyr::select(-c(adj.r2, adj.r2_clim, adj.r2_lc)) %>%
-  pivot_longer(!bird, names_to = "var.type", values_to = "r2s") %>%
-  group_by(var.type) %>%
-  add_row(.data = ttt) %>%
-  ggplot(aes(y = reorder(bird, r2s), x = r2s, fill = var.type)) +
-  geom_bar(position = "stack", stat = "identity",
-           color = "grey40", alpha = 0.9, size = 0.2,
-           width = 0.7) +
-  scale_fill_manual(values=c("grey40", "grey70","grey100"),
-                    labels = c("Climate", "Full", "Land cover")) +
-  ylab("") +
-  xlab("adjusted R2") +
-  theme(axis.text.y = element_text(size = 6)) +
-  labs(fill = "Model type")
-
-all_species_stacked
-
-ggsave("figures/LM_Results/all_species_stacked.png", plot = all_species_stacked,
-       width = 8, height = 6, dpi = 300)
 
 adj_r2_lc <- adj_r2_lc %>%
   rowwise() %>%
@@ -57,6 +40,39 @@ adj_r2_lc_traits <- adj_r2_lc_traits %>%
   mutate(v.clim = adj.r2 - adj.r2_lc,
          v.lc = adj.r2 - adj.r2_clim,
          v.joint = adj.r2 - (adj.r2_lc + adj.r2_clim))
+
+ttt <- adj_r2_lc %>%
+  dplyr::select(-c(adj.r2, adj.r2_clim, adj.r2_lc)) %>%
+  pivot_longer(!bird, names_to = "var.type", values_to = "r2s") %>%
+  group_by(var.type) %>%
+  summarize(r2s = mean(r2s)) %>%
+  mutate(bird = "Mean") %>%
+  relocate(bird)
+
+
+# All species
+all_species_stacked <-
+  adj_r2_lc %>%
+  dplyr::select(-c(adj.r2, adj.r2_clim, adj.r2_lc)) %>%
+  pivot_longer(!bird, names_to = "var.type", values_to = "r2s") %>%
+  group_by(var.type) %>%
+  add_row(.data = ttt) %>%
+  ggplot(aes(y = reorder(bird, r2s), x = r2s, fill = var.type)) +
+  geom_bar(position = "stack", stat = "identity",
+           color = "grey40", alpha = 0.9, linewidth = 0.2,
+           width = 0.7) +
+  scale_fill_manual(values=c("grey100", "grey70","grey40"),
+                    labels = c("Climate", "Full", "Land cover")) +
+  ylab("") +
+  xlab(expression(paste("adj. R"^2))) +
+  theme(axis.text.y = element_text(size = 6)) +
+  labs(fill = "Model type")
+
+all_species_stacked
+
+ggsave("figures/LM_Results/all_species_stacked.png", plot = all_species_stacked,
+       width = 8, height = 6, dpi = 300)
+
 
 # adj_r2_lc %>%
 #   dplyr::select(-c(adj.r2, adj.r2_clim, adj.r2_lc)) %>%
@@ -90,29 +106,13 @@ adj_r2_lc %>%
 #                # color="red3", fill="red3",
 #                alpha = 0.8)
 
-# ---- stacked barplots categorical traits ----
-
-mig.plot <- adj_r2_lc_traits %>%
-  group_by(Migrant) %>%
-  summarize(mean.v.clim = mean(v.clim),
-            mean.v.lc = mean(v.lc),
-            mean.v.joint = mean(v.joint),
-            n_obs = n()) %>%
-  pivot_longer(!c(Migrant, n_obs), names_to = "variable", values_to = "variance") %>%
-  ggplot(aes(x = Migrant, y = variance, group = Migrant, fill = variable)) +
-  geom_bar(position = "stack", stat = "identity",
-           color = "grey30", alpha = 0.9, size = 0.3) +
-  ylab("Mean R2") +
-  scale_fill_manual(values=c("grey40", "grey70","grey100"),
-                    labels = c("Climate", "Full", "Land cover")) +
-  labs(fill = "Model type")  +
-  geom_text(aes(label = n_obs),
-            stat = "count", vjust= -0.2, y = 0.01)
+# ---- life history traits and variance ----
 
 gen.plot <- adj_r2_lc_traits %>%
+  drop_na(GenLength) %>%
   mutate(gen.length.bins = cut(GenLength,
                                breaks = c(0, 2.5, 4, 12),
-                               labels = c("short (<2.5y)", "medium (2.5-4y)", "long (>4y)"))) %>%
+                               labels = c("short (< 2.5y)", "medium (2.5 - 4y)", "long (> 4y)"))) %>%
   group_by(gen.length.bins) %>%
   summarize(mean.v.clim = mean(v.clim),
             mean.v.lc = mean(v.lc),
@@ -120,24 +120,28 @@ gen.plot <- adj_r2_lc_traits %>%
             n_obs = n()
   ) %>%
   pivot_longer(!c(gen.length.bins, n_obs), names_to = "variable", values_to = "R2") %>%
-  ggplot(aes(x = gen.length.bins, y = R2, group = gen.length.bins, fill = variable)) +
+  ggplot(aes(x = gen.length.bins, y = R2,
+             # group = gen.length.bins,
+             fill = variable)) +
   geom_bar(position = "stack", stat = "identity", color = "grey30",
            alpha = 0.8, size = 0.3) +
   xlab("Generation Length") +
-  ylab("Mean R2") +
-  scale_fill_manual(values=c("grey40", "grey70","grey100"),
+  ylab(expression(paste("adj. R"^2))) +
+  scale_fill_manual(values=c("grey100", "grey70","grey40"),
                     labels = c("Climate", "Full", "Land cover")) +
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
-            stat = "count", vjust= -0.2, y = 0.01)
+            stat = "count", vjust= -0.2, y = 0.01) +
+  theme(legend.position = "none") +
+  ylim(0, 0.25)
 
 clutch.plot <- adj_r2_lc_traits %>%
   drop_na(Clutch.Bird) %>%
   mutate(clutch.size.bins = cut(Clutch.Bird,
                                 breaks = c(0, 3, 5, 12),
-                                labels = c("small (<=3)",
-                                           "medium (3-5)",
-                                           "large (>5)"))) %>%
+                                labels = c("small (< 3)",
+                                           "medium (3 - 5)",
+                                           "large (> 5)"))) %>%
   group_by(clutch.size.bins) %>%
   summarize(mean.v.clim = mean(v.clim),
             mean.v.lc = mean(v.lc),
@@ -145,20 +149,19 @@ clutch.plot <- adj_r2_lc_traits %>%
             n_obs = n()
   ) %>%
   pivot_longer(!c(clutch.size.bins, n_obs), names_to = "variable", values_to = "R2") %>%
-  ggplot(aes(x = clutch.size.bins, y = R2, group = clutch.size.bins, fill = variable)) +
+  ggplot(aes(x = clutch.size.bins, y = R2,
+             # group = clutch.size.bins,
+             fill = variable)) +
   geom_bar(position = "stack", stat = "identity", color = "grey30",
-           alpha = 1, size = 0.3) +
+           alpha = 0.8, size = 0.3) +
   xlab("Clutch size") +
-  ylab("Mean R2") +
-  scale_fill_manual(values=c("grey40", "grey70","grey100"),
+  ylab("") +
+  scale_fill_manual(values=c("grey100", "grey70","grey40"),
                     labels = c("Climate", "Full", "Land cover")) +
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01) +
-  hrbrthemes::theme_ipsum()
-# theme_minimal()
-
-clutch.plot
+  ylim(0, 0.25)
 
 brain.plot <- adj_r2_lc_traits %>%
   drop_na(rel_brain_size) %>%
@@ -174,22 +177,26 @@ brain.plot <- adj_r2_lc_traits %>%
             n_obs = n()
   ) %>%
   pivot_longer(!c(rel.brain.size.bins, n_obs), names_to = "variable", values_to = "variance") %>%
-  ggplot(aes(x = rel.brain.size.bins, y = variance, group = rel.brain.size.bins, fill = variable)) +
+  ggplot(aes(x = rel.brain.size.bins, y = variance,
+             # group = rel.brain.size.bins,
+             fill = variable)) +
   geom_bar(position = "stack", stat = "identity", color = "grey30",
            alpha = 0.8, size = 0.3) +
   xlab("Relative brain size") +
-  ylab("Mean R2") +
-  scale_fill_manual(values=c("grey40", "grey70","grey100"),
+  ylab(expression(paste("adj. R"^2))) +
+  scale_fill_manual(values=c("grey100", "grey70","grey40"),
                     labels = c("Climate", "Full", "Land cover")) +
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
-            stat = "count", vjust= -0.2, y = 0.01)
+            stat = "count", vjust= -0.2, y = 0.01) +
+  theme(legend.position = "none") +
+  ylim(0, 0.25)
 
 innov.plot <- adj_r2_lc_traits %>%
   drop_na(tot.innov) %>%
   mutate(tot.innov.bins = cut(tot.innov,
                               breaks = c(-1, 0, 3, 45),
-                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
+                              labels = c("none", "few (<= 4)", "many (> 4)"))) %>%
   group_by(tot.innov.bins) %>%
   summarize(mean.v.clim = mean(v.clim),
             mean.v.lc = mean(v.lc),
@@ -197,124 +204,27 @@ innov.plot <- adj_r2_lc_traits %>%
             n_obs = n()
   ) %>%
   pivot_longer(!c(tot.innov.bins, n_obs), names_to = "variable", values_to = "variance") %>%
-  ggplot(aes(x = tot.innov.bins, y = variance, group = tot.innov.bins, fill = variable)) +
+  ggplot(aes(x = tot.innov.bins, y = variance,
+             # group = tot.innov.bins,
+             fill = variable)) +
   geom_bar(position = "stack", stat = "identity", color = "grey30",
            alpha = 0.8, size = 0.3) +
   xlab("Number of innovations") +
-  ylab("Mean R2") +
-  scale_fill_manual(values=c("grey40", "grey70","grey100"),
+  ylab("") +
+  scale_fill_manual(values=c("grey100", "grey70","grey40"),
                     labels = c("Climate", "Full", "Land cover")) +
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
-            stat = "count", vjust= -0.2, y = 0.01)
+            stat = "count", vjust= -0.2, y = 0.01) +
+  ylim(0, 0.25)
 
-trophic.level.plot <- adj_r2_lc_traits %>%
-  group_by(Trophic.Level) %>%
-  summarize(mean.v.clim = mean(v.clim),
-            mean.v.lc = mean(v.lc),
-            mean.v.joint = mean(v.joint),
-            n_obs = n()
-  ) %>%
-  pivot_longer(!c(Trophic.Level, n_obs), names_to = "variable", values_to = "variance") %>%
-  ggplot(aes(x = factor(Trophic.Level), y = variance,
-             group = factor(Trophic.Level), fill = variable)) +
-  geom_bar(position = "stack", stat = "identity", color = "grey30",
-           alpha = 0.8, size = 0.3) +
-  xlab("Trophic Level") +
-  ylab("Mean R2") +
-  scale_fill_manual(values=c("grey40", "grey70","grey100"),
-                    labels = c("Climate", "Full", "Land cover")) +
-  labs(fill = "Model type") +
-  geom_text(aes(label = n_obs),
-            stat = "count", vjust= -0.2, y = 0.01)
+life_history_plot <- gen.plot + clutch.plot + brain.plot + innov.plot
+life_history_plot
 
-trophic.niche.plot <- adj_r2_lc_traits %>%
-  group_by(Trophic.Niche) %>%
-  summarize(mean.v.clim = mean(v.clim),
-            mean.v.lc = mean(v.lc),
-            mean.v.joint = mean(v.joint),
-            n_obs = n()
-  ) %>%
-  pivot_longer(!c(Trophic.Niche, n_obs), names_to = "variable", values_to = "variance") %>%
-  ggplot(aes(x = Trophic.Niche, y = variance, group = Trophic.Niche, fill = variable)) +
-  geom_bar(position = "stack", stat = "identity", color = "grey30",
-           alpha = 0.8, size = 0.3) +
-  xlab("Trophic Niche") +
-  ylab("Mean R2") +
-  scale_fill_manual(values=c("grey40", "grey70","grey100"),
-                    labels = c("Climate", "Full", "Land cover")) +
-  labs(fill = "Model type")  +
-  geom_text(aes(label = n_obs),
-            stat = "count", vjust= -0.2, y = 0.01)
+ggsave(plot = life_history_plot, filename = "figures/LM_results/life_history_traits_adj_r2_stacked.png",
+       width = 8, height = 6, dpi = 300)
 
-# ---- continuous traits
-
-mass.plot <-adj_r2_lc_traits %>%
-  mutate(body.mass.bins = cut(body.mass,
-                              breaks = c(0, 30, 50, 2000),
-                              labels = c("small", "medium", "large"))) %>%
-  group_by(body.mass.bins) %>%
-  summarize(mean.v.clim = mean(v.clim),
-            mean.v.lc = mean(v.lc),
-            mean.v.joint = mean(v.joint),
-            n_obs = n()
-  ) %>%
-  pivot_longer(!c(body.mass.bins, n_obs), names_to = "variable", values_to = "R2") %>%
-  ggplot(aes(x = body.mass.bins, y = R2, group = body.mass.bins, fill = variable)) +
-  geom_bar(position = "stack", stat = "identity", color = "grey30",
-           alpha = 0.8, size = 0.3) +
-  xlab("Body mass") +
-  ylab("Mean R2") +
-  scale_fill_manual(values=c("grey40", "grey70","grey100"),
-                    labels = c("Climate", "Full", "Land cover")) +
-  labs(fill = "Model type")  +
-  geom_text(aes(label = n_obs),
-            stat = "count", vjust= -0.2, y = 0.01)
-
-wing.plot <-adj_r2_lc_traits %>%
-  mutate(hand.wing.ind.bin = cut(hand.wing.ind,
-                                 breaks = c(0, 20, 35, 72),
-                                 labels = c("small","medium", "large"))) %>%
-  group_by(hand.wing.ind.bin) %>%
-  summarize(mean.v.clim = mean(v.clim),
-            mean.v.lc = mean(v.lc),
-            mean.v.joint = mean(v.joint),
-            n_obs = n()
-  ) %>%
-  pivot_longer(!c(hand.wing.ind.bin, n_obs), names_to = "variable", values_to = "R2") %>%
-  ggplot(aes(x = hand.wing.ind.bin, y = R2, group = hand.wing.ind.bin, fill = variable)) +
-  geom_bar(position = "stack", stat = "identity", color = "grey30",
-           alpha = 0.8, size = 0.3) +
-  xlab("Hand wing index") +
-  ylab("Mean R2") +
-  scale_fill_manual(values=c("grey40", "grey70","grey100"),
-                    labels = c("Climate", "Full", "Land cover")) +
-  labs(fill = "Model type")  +
-  geom_text(aes(label = n_obs),
-            stat = "count", vjust= -0.2, y = 0.01)
-
-habitat.plot <- adj_r2_lc_traits %>%
-  drop_na(hab.breadth) %>%
-  mutate(hab.breadth.bins = cut(hab.breadth,
-                                breaks = c(0, 3, 5, 10),
-                                labels = c("Low", "Medium", "High"))) %>%
-  group_by(hab.breadth.bins) %>%
-  summarize(mean.v.clim = mean(v.clim),
-            mean.v.lc = mean(v.lc),
-            mean.v.joint = mean(v.joint),
-            n_obs = n()
-  ) %>%
-  pivot_longer(!c(hab.breadth.bins, n_obs), names_to = "variable", values_to = "R2") %>%
-  ggplot(aes(x = hab.breadth.bins, y = R2, group = hab.breadth.bins, fill = variable)) +
-  geom_bar(position = "stack", stat = "identity", color = "grey30",
-           alpha = 0.8, size = 0.3) +
-  xlab("Habitat breadth") +
-  ylab("Mean R2") +
-  scale_fill_manual(values=c("grey40", "grey70","grey100"),
-                    labels = c("Climate", "Full", "Land cover")) +
-  labs(fill = "Model type")  +
-  geom_text(aes(label = n_obs),
-            stat = "count", vjust= -0.2, y = 0.01)
+# ---- ecological traits and variance ----
 
 diet.plot <-adj_r2_lc_traits %>%
   drop_na(diet.breadth) %>%
@@ -328,16 +238,184 @@ diet.plot <-adj_r2_lc_traits %>%
             n_obs = n(),
   ) %>%
   pivot_longer(!c(diet.breadth.bins, n_obs), names_to = "variable", values_to = "R2") %>%
-  ggplot(aes(x = diet.breadth.bins, y = R2, group = diet.breadth.bins, fill = variable)) +
+  ggplot(aes(x = diet.breadth.bins, y = R2,
+             # group = diet.breadth.bins,
+             fill = variable)) +
   geom_bar(position = "stack", stat = "identity", color = "grey30",
            alpha = 0.8, size = 0.3) +
   xlab("Diet breadth") +
-  ylab("Mean R2") +
-  scale_fill_manual(values=c("grey40", "grey70","grey100"),
+  ylab(expression(paste("adj. R"^2))) +
+  scale_fill_manual(values=c("grey100", "grey70","grey40"),
                     labels = c("Climate", "Full", "Land cover")) +
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
-            stat = "count", vjust= -0.2, y = 0.01)
+            stat = "count", vjust= -0.2, y = 0.01) +
+  theme(legend.position = "none") +
+  ylim(0, 0.25)
+
+habitat.plot <- adj_r2_lc_traits %>%
+  drop_na(hab.breadth) %>%
+  mutate(hab.breadth.bins = cut(hab.breadth,
+                                breaks = c(0, 3, 5, 10),
+                                labels = c("Low", "Medium", "High"))) %>%
+  group_by(hab.breadth.bins) %>%
+  summarize(mean.v.clim = mean(v.clim),
+            mean.v.lc = mean(v.lc),
+            mean.v.joint = mean(v.joint),
+            n_obs = n()
+  ) %>%
+  pivot_longer(!c(hab.breadth.bins, n_obs), names_to = "variable", values_to = "R2") %>%
+  ggplot(aes(x = hab.breadth.bins, y = R2,
+             # group = hab.breadth.bins,
+             fill = variable)) +
+  geom_bar(position = "stack", stat = "identity", color = "grey30",
+           alpha = 0.8, size = 0.3) +
+  xlab("Habitat breadth") +
+  ylab("") +
+  scale_fill_manual(values=c("grey100", "grey70","grey40"),
+                    labels = c("Climate", "Full", "Land cover")) +
+  labs(fill = "Model type")  +
+  geom_text(aes(label = n_obs),
+            stat = "count", vjust= -0.2, y = 0.01) +
+  ylim(0, 0.25) +
+  theme(legend.position = "none")
+
+trophic.niche.plot <- adj_r2_lc_traits %>%
+  group_by(Trophic.Niche) %>%
+  summarize(mean.v.clim = mean(v.clim),
+            mean.v.lc = mean(v.lc),
+            mean.v.joint = mean(v.joint),
+            n_obs = n()
+  ) %>%
+  pivot_longer(!c(Trophic.Niche, n_obs), names_to = "variable", values_to = "variance") %>%
+  ggplot(aes(x = Trophic.Niche, y = variance,
+             # group = Trophic.Niche,
+             fill = variable)) +
+  geom_bar(position = "stack", stat = "identity", color = "grey30",
+           alpha = 0.8, size = 0.3) +
+  xlab("Trophic Niche") +
+  ylab(expression(paste("adj. R"^2))) +
+  scale_fill_manual(values=c("grey100", "grey70","grey40"),
+                    labels = c("Climate", "Full", "Land cover")) +
+  labs(fill = "Model type")  +
+  geom_text(aes(label = n_obs),
+            stat = "count", vjust= -0.2, y = 0.01)  +
+  theme(legend.position = "none") +
+  ylim(0, 0.5)
+
+trophic.level.plot <- adj_r2_lc_traits %>%
+  group_by(Trophic.Level) %>%
+  summarize(mean.v.clim = mean(v.clim),
+            mean.v.lc = mean(v.lc),
+            mean.v.joint = mean(v.joint),
+            n_obs = n()
+  ) %>%
+  pivot_longer(!c(Trophic.Level, n_obs), names_to = "variable", values_to = "variance") %>%
+  ggplot(aes(x = factor(Trophic.Level), y = variance,
+             # group = factor(Trophic.Level),
+             fill = variable)) +
+  geom_bar(position = "stack", stat = "identity", color = "grey30",
+           alpha = 0.8, size = 0.3) +
+  xlab("Trophic Level") +
+  ylab("") +
+  scale_fill_manual(values=c("grey100", "grey70","grey40"),
+                    labels = c("Climate", "Full", "Land cover")
+                    ) +
+  labs(fill = "Model type") +
+  geom_text(aes(label = n_obs),
+            stat = "count", vjust= -0.2, y = 0.01) +
+  ylim(0, 0.25)
+
+ecological_plot <- diet.plot + habitat.plot + trophic.level.plot
+ecological_plot
+
+ggsave(plot = ecological_plot, filename = "figures/LM_results/eco_traits_adj_r2_stacked.png",
+       width = 8, height = 6, dpi = 300)
+
+# ---- morphological traits and variance ----
+
+mass.plot <-adj_r2_lc_traits %>%
+  drop_na(body.mass) %>%
+  mutate(body.mass.bins = cut(body.mass,
+                              breaks = c(0, 30, 50, 2000),
+                              labels = c("small (< 30 g)", "medium (30 - 50 g)", "large (> 50 g)"))) %>%
+  group_by(body.mass.bins) %>%
+  summarize(mean.v.clim = mean(v.clim),
+            mean.v.lc = mean(v.lc),
+            mean.v.joint = mean(v.joint),
+            n_obs = n()
+  ) %>%
+  pivot_longer(!c(body.mass.bins, n_obs), names_to = "variable", values_to = "R2") %>%
+  ggplot(aes(x = body.mass.bins, y = R2,
+             # group = body.mass.bins,
+             fill = variable)) +
+  geom_bar(position = "stack", stat = "identity", color = "grey30",
+           alpha = 0.8, size = 0.3) +
+  xlab("Body mass") +
+  ylab(expression(paste("adj. R"^2))) +
+  scale_fill_manual(values=c("grey100", "grey70","grey40"),
+                    labels = c("Climate", "Full", "Land cover")) +
+  labs(fill = "Model type")  +
+  geom_text(aes(label = n_obs),
+            stat = "count", vjust= -0.2, y = 0.01) +
+  ylim(0,0.25) +
+  theme(legend.position = "none")
+
+wing.plot <- adj_r2_lc_traits %>%
+  drop_na(hand.wing.ind) %>%
+  mutate(hand.wing.ind.bin = cut(hand.wing.ind,
+                                 breaks = c(0, 20, 35, 72),
+                                 labels = c("small","medium", "large"))) %>%
+  group_by(hand.wing.ind.bin) %>%
+  summarize(mean.v.clim = mean(v.clim),
+            mean.v.lc = mean(v.lc),
+            mean.v.joint = mean(v.joint),
+            n_obs = n()
+  ) %>%
+  pivot_longer(!c(hand.wing.ind.bin, n_obs), names_to = "variable", values_to = "R2") %>%
+  ggplot(aes(x = hand.wing.ind.bin, y = R2,
+             # group = hand.wing.ind.bin,
+             fill = variable)) +
+  geom_bar(position = "stack", stat = "identity", color = "grey30",
+           alpha = 0.8, size = 0.3) +
+  xlab("Hand wing index") +
+  ylab("") +
+  scale_fill_manual(values=c("grey100", "grey70","grey40"),
+                    labels = c("Climate", "Full", "Land cover")) +
+  labs(fill = "Model type")  +
+  geom_text(aes(label = n_obs),
+            stat = "count", vjust= -0.2, y = 0.01) +
+  ylim(0,0.25)  +
+  theme(legend.position = "none")
+
+mig.plot <- adj_r2_lc_traits %>%
+  drop_na(Migrant) %>%
+  group_by(Migrant) %>%
+  summarize(mean.v.clim = mean(v.clim),
+            mean.v.lc = mean(v.lc),
+            mean.v.joint = mean(v.joint),
+            n_obs = n()) %>%
+  pivot_longer(!c(Migrant, n_obs), names_to = "variable", values_to = "variance") %>%
+  ggplot(aes(x = Migrant, y = variance,
+             # group = Migrant,
+             fill = variable)) +
+  geom_bar(position = "stack", stat = "identity",
+           color = "grey30", alpha = 0.8, size = 0.3) +
+  ylab("") +
+  scale_fill_manual(values=c("grey100", "grey70","grey40"),
+                    labels = c("Climate", "Full", "Land cover")) +
+  labs(fill = "Model type")  +
+  geom_text(aes(label = n_obs),
+            stat = "count", vjust= -0.2, y = 0.01) +
+  ylim(0,0.25)
+
+morph_plot <- mass.plot + wing.plot + mig.plot
+morph_plot
+
+ggsave(morph_plot, filename = "figures/LM_results/morph_traits_adj_r2_stacked.png",
+       width = 8, height = 6, dpi = 300)
+
+# ---- population trends and variance ----
 
 # adj_r2_lc_traits %>%
 #   group_by(ACAD.ind) %>%
@@ -368,16 +446,20 @@ acad.plot <- adj_r2_lc_traits %>%
             mean.v.joint = mean(v.joint),
             n_obs = n()) %>%
   pivot_longer(!c(ACAD.ind.bins, n_obs), names_to = "variable", values_to = "variance") %>%
-  ggplot(aes(x = ACAD.ind.bins, y = variance, group = ACAD.ind.bins, fill = variable)) +
+  ggplot(aes(x = ACAD.ind.bins, y = variance,
+             # group = ACAD.ind.bins,
+             fill = variable)) +
   geom_bar(position = "stack", stat = "identity", color = "grey30",
            alpha = 0.8, size = 0.3) +
   xlab("ACAD population trend") +
-  ylab("Mean R2") +
-  scale_fill_manual(values=c("grey40", "grey70","grey100"),
+  ylab(expression(paste("adj. R"^2))) +
+  scale_fill_manual(values=c("grey100", "grey70","grey40"),
                     labels = c("Climate", "Full", "Land cover")) +
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
-            stat = "count", vjust= -0.2, y = 0.01)
+            stat = "count", vjust= -0.2, y = 0.01) +
+  theme(legend.position = "none") +
+  ylim(0,0.25)
 
 sauer.plot <- adj_r2_lc_traits %>%
   drop_na(sauer.trend) %>%
@@ -390,31 +472,33 @@ sauer.plot <- adj_r2_lc_traits %>%
             mean.v.joint = mean(v.joint),
             n_obs = n()) %>%
   pivot_longer(!c(sauer.trend.bins, n_obs), names_to = "variable", values_to = "variance") %>%
-  ggplot(aes(x = sauer.trend.bins, y = variance, group = sauer.trend.bins, fill = variable)) +
+  ggplot(aes(x = sauer.trend.bins, y = variance,
+             # group = sauer.trend.bins,
+             fill = variable)) +
   geom_bar(position = "stack", stat = "identity", color = "grey30",
            alpha = 0.8, size = 0.3) +
   xlab("Sauer population trend") +
-  ylab("Mean R2") +
-  scale_fill_manual(values=c("grey40", "grey70","grey100"),
+  ylab("") +
+  scale_fill_manual(values=c("grey100", "grey70","grey40"),
                     labels = c("Climate", "Full", "Land cover")
   ) +
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
-            stat = "count", vjust= -0.2, y = 0.01)
+            stat = "count", vjust= -0.2, y = 0.01) +
+  ylim(0,0.25)
+
+pop_stacked <- acad.plot + sauer.plot
+pop_stacked
+
+ggsave(pop_stacked, filename = "figures/LM_results/pop_trends_adj_r2_stacked.png",
+       width = 8, height = 6, dpi = 300)
+
+# ----- all traits ----
 
 stacked_final <- diet.plot + habitat.plot + trophic.niche.plot + trophic.level.plot +
   mass.plot + wing.plot + mig.plot + gen.plot + clutch.plot + brain.plot + innov.plot
 
 stacked_final
-
-ecological_plot <- diet.plot + habitat.plot + trophic.niche.plot + trophic.level.plot
-ecological_plot
-
-life_history_plot <- gen.plot + clutch.plot + brain.plot + innov.plot
-life_history_plot
-
-pop_stacked <- acad.plot + sauer.plot
-pop_stacked
 
 # ---- beta coefs vs gen length plots ----
 
