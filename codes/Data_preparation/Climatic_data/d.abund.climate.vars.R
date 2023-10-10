@@ -411,7 +411,8 @@ bp_r2_clim <- r2.clim %>%
 
 bp_r2_clim
 
-ggplot2::ggsave(filename = "figures/ClimVar_adj_r2_dAbund.png", plot = bp_r2_clim, width = 8, height = 6, dpi = 300)
+ggplot2::ggsave(filename = "figures/ClimVar_adj_r2_dAbund.png",
+                plot = bp_r2_clim, width = 8, height = 6, dpi = 300)
 
 # ---- build land use boxplots ----
 

@@ -102,6 +102,8 @@ abund.min40.pc <- d.abund.min40 %>%
 
 rm(clim.df, lc.df, lc.pcs, d.abund.min10, d.abund.min40, d.abund.min6, dlc.pcs)
 
+rm(abund.min40.pc)
+
 # === SDM model data set T1 + T2 ----
 # ---- load data ----
 

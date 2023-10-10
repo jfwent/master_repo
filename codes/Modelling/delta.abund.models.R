@@ -4,6 +4,7 @@
 
 # ---- library ----
 library(tidyverse)
+library(progress)
 
 # ==== with land cover vars -----
 # ---- LM function -----
@@ -157,8 +158,8 @@ load("data/species_traits.rda")
 
 species.traits <- species.traits %>%
   rename(bird =  animal_jetz) %>%
-  dplyr::select(-c(Common.Name, tot_diet_div, shannon, Clutch)) %>%
-  mutate(na.num = rowSums(is.na(.)))
+  dplyr::select(-c(Common.Name, tot_diet_div, shannon, Clutch)) #%>%
+  # mutate(na.num = rowSums(is.na(.)))
 
 # traits <- colnames(species.traits[2:14])
 
@@ -307,6 +308,91 @@ save(lc_model_coefs, file = "results/beta_coefficients_lc_LMs.rda")
 
 # ---- univariate models ----
 
+birds <- sort(unique(abund.min40.lc$animal_jetz))
+vars <- colnames(abund.min40.lc[4:17])
+
+univar_mods <- list()
+
+train_control <- caret::trainControl(method = "LOOCV", savePredictions = "final")
+
+pb <- progress_bar$new(
+  format = "[:bar] :percent | ETA: :eta",
+  total = length(vars),
+  clear = FALSE
+)
+
+set.seed(123)
+
+for(variable.ind in vars){
+  
+  pb$tick()
+  
+  bird_mods <- list()
+  
+  for(bird.ind in birds){
+    bird.tmp <- abund.min40.lc %>%
+      filter(animal_jetz == bird.ind)
+    
+    form.tmp <- as.formula(paste("delta.abund ~", variable.ind, "+ I(", variable.ind, "^2)"))
+    
+    model.tmp <- caret::train(
+      form.tmp,
+      data = bird.tmp,
+      method = "lm",
+      trControl = train_control,
+      preProcess = c("center", "scale")
+      )
+    
+    bird_mods[[bird.ind]] <- model.tmp
+  }
+  
+  univar_mods[[variable.ind]] <- bird_mods
+}
+
+rm(train_control, pb, bird_mods, model.tmp, form.tmp, bird.tmp, birds, vars, variable.ind)
+
+# ---- univariate beta coefs ----
+
+univar_coefs <- tibble(bird = character(),
+                           variable = character(),
+                           beta.coefs = numeric())
+
+vars <- colnames(abund.min40.lc[4:19])
+
+for(var.ind in vars){
+  
+  var.tmp <- univar_mods[[var.ind]]
+  
+  for(bird.ind in birds){
+    
+    mod.tmp <- var.tmp[[bird.ind]]
+    
+    univar_coefs_entry <- tibble(
+      bird = bird.ind,
+      variable = names(coefficients(mod.tmp$finalModel)),
+      beta.coefs = coefficients(mod.tmp$finalModel),
+    )
+    
+    univar_coefs <- bind_rows(univar_coefs, univar_coefs_entry)
+  }
+}
+
+rm(bird.ind, univar_coefs_entry, mod.tmp, var.tmp, var.ind, bird.ind, vars, birds)
+
+save(univar_coefs, file = "results/beta_coefs_univar_models.rda")
+
+# --- stats univar coefs ----
+
+tttt <- univar_coefs %>%
+  na.omit() %>%
+  filter(!(variable %in% "(Intercept)")) %>%
+  pivot_wider(id_cols = bird, names_from = variable, values_from = beta.coefs) %>%
+  left_join(species.traits, by = "bird") %>%
+  mutate(na.num = rowSums(is.na(.))) %>%
+  filter(na.num < 13) %>%
+  select(-c(contains("crop"), na.num))
+
+summary(tttt)
 
 # ================ OLD ----
 # ---- var.imp plot -----

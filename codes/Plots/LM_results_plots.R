@@ -1365,77 +1365,159 @@ coef_plot_innov <- p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + p11 + p12 
 
 coef_plot_innov
 
-# ---- continuous traits plots full ----
+# ===== Old ----
+# ---- continuous traits vs adj. r2 full model ----
 
 p1 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = log(GenLength))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  # geom_abline() +
-  # ylab("Residuals") +
-  xlab("log(Generation length)")  +
-  # geom_hline(yintercept = 0, linetype = "dashed") #+
-  # ylim(-0.1,0.1)
+  xlab("log(Generation length)")
   
-  p2 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = Clutch.Bird)) +
+p2 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = Clutch.Bird)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm")+
-  # geom_abline() +
   xlab("Clutch size") +
-  ylab("") +
-  # geom_hline(yintercept = 0, linetype = "dashed") #+
-  # ylim(-0.1,0.1)
-  
-  p3 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = diet.breadth)) +
+  ylab("")
+
+p3 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = diet.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  # geom_abline() +
   xlab("Diet breadth") +
-  ylab("")  +
-  # geom_hline(yintercept = 0, linetype = "dashed") #+
-  # ylim(-0.1,0.1)
-  
-  p4 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = hab.breadth)) +
+  ylab("")
+
+p4 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = hab.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm")+
-  # geom_abline() +
-  xlab("Habitat breadth") +
-  # ylab("Residuals") +
-  # geom_hline(yintercept = 0, linetype = "dashed") #+
-  # ylim(-0.1,0.1)
-  
-  p5 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = log(body.mass))) +
+  xlab("Habitat breadth")
+# ylab("Residuals")
+    
+p5 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = log(body.mass))) +
   geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm")+
-  # geom_abline() +
+  geom_smooth(method = "lm") +
   xlab("log(Body mass)") +
-  ylab("") +
-  # geom_hline(yintercept = 0, linetype = "dashed") #+
-  # ylim(-0.1,0.1)
+  ylab("")
   
   p6 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = hand.wing.ind)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  # geom_abline() +
   xlab("Hand-wing index") +
   ylab("")
-# geom_hline(yintercept = 0, linetype = "dashed") #+
-# ylim(-0.1, 0.1)
 
 p7 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = rel_brain_size)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  xlab("Relative brain size") +
-  # ylab("Residuals") +
-  # geom_hline(yintercept = 0, linetype = "dashed") #+
-  # ylim(-0.1,0.1)
+  xlab("Relative brain size")
   
-  final_plot <- p1 + p2 + p3 + p4 + p5 + p6 + p7
+final_plot <- p1 + p2 + p3 + p4 + p5 + p6 + p7
 
 final_plot
 
-# ggsave(filename = "figures/contin_traits_residuals_full_LM.png", plot = final_plot,
-#        width = 8, height = 6, dpi = 300)
+ggsave(filename = "figures/LM_Results/contin_traits_adj_R2_full_LM.png", plot = final_plot,
+       width = 8, height = 6, dpi = 300)
 
+# ---- continuous traits vs adj. r2 climate model ----
+
+p1 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2_clim, x = log(GenLength))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Generation length)")
+
+p2 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2_clim, x = Clutch.Bird)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm")+
+  xlab("Clutch size") +
+  ylab("")
+
+p3 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2_clim, x = diet.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Diet breadth") +
+  ylab("")
+
+p4 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2_clim, x = hab.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm")+
+  xlab("Habitat breadth")
+# ylab("Residuals")
+
+p5 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2_clim, x = log(body.mass))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Body mass)") +
+  ylab("")
+
+p6 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2_clim, x = hand.wing.ind)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Hand-wing index") +
+  ylab("")
+
+p7 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2_clim, x = rel_brain_size)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Relative brain size")
+
+final_plot_clim <- p1 + p2 + p3 + p4 + p5 + p6 + p7
+
+final_plot_clim
+
+ggsave(filename = "figures/LM_Results/contin_traits_adj_R2_clim_LM.png", plot = final_plot_clim,
+       width = 8, height = 6, dpi = 300)
+
+# ---- continuous traits vs adj. r2 land cover model ----
+
+p1 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2_lc, x = log(GenLength))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Generation length)") +
+  ylim(0,0.35)
+
+p2 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2_lc, x = Clutch.Bird)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm")+
+  xlab("Clutch size") +
+  ylab("") +
+  ylim(0,0.35)
+
+p3 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2_lc, x = diet.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Diet breadth") +
+  ylab("") +
+  ylim(0,0.35)
+
+p4 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2_lc, x = hab.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm")+
+  xlab("Habitat breadth") +
+  ylim(0,0.35)
+
+p5 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2_lc, x = log(body.mass))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Body mass)") +
+  ylab("") +
+  ylim(0,0.35)
+
+p6 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2_lc, x = hand.wing.ind)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Hand-wing index") +
+  ylab("") +
+  ylim(0,0.35)
+
+p7 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2_lc, x = rel_brain_size)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Relative brain size") +
+  ylim(0,0.35)
+
+final_plot_lc <- p1 + p2 + p3 + p4 + p5 + p6 + p7
+
+final_plot_lc
+
+ggsave(filename = "figures/LM_Results/contin_traits_adj_R2_lc_LM.png", plot = final_plot_lc,
+       width = 8, height = 6, dpi = 300)
 
 # ---- categorical traits full ----
 

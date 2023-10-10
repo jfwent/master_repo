@@ -40,7 +40,6 @@ bbs.routes.segmented.final <- bbs.routes.segmented.final %>%
 
 mapview::mapview(bbs.routes.segmented.final)
 
-
 # # see common segments ----
 # 
 # shp.segments <- sort(unique(bbs.routes.segmented.final$partition)) # 2880 segments
