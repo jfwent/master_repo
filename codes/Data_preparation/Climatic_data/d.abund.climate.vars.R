@@ -148,7 +148,7 @@ d.abund.climate <- d.abund.min40 %>%
   left_join(clim.df, by = c("segment")) %>%
   group_by(animal_jetz) %>%
   mutate(n_entries = n()) %>%
-  filter(n_entries >= 10) %>%
+  filter(n_entries >= 40) %>%
   select(-n_entries)
 
 #%>%
@@ -380,7 +380,9 @@ bp_rmse_clim <- clim_rmse %>%
 bp_rmse_clim
 
 bp_r2_clim <- r2.clim %>%
-  ggplot2::ggplot(aes(y = variable, x = adj.r2, fill = variable)) +
+  ggplot2::ggplot(aes(y = reorder(variable, adj.r2),
+                      x = adj.r2,
+                      fill = reorder(variable, adj.r2))) +
   geom_boxplot(width = 0.3,
                outlier.size = 1,
                alpha = 0.5) +
@@ -395,19 +397,23 @@ bp_r2_clim <- r2.clim %>%
     position = position_nudge(y = 0.200),
     height = 0.55
   )+
+  viridis::scale_fill_viridis(discrete = T) +
   stat_summary(
     fun.data = mean_se, # Use mean and standard error
     geom = "point",
     color = "black",
     size = 1.5
   ) +
+  theme_bw() +
   theme(
     # legend.key.size = unit(5, "mm"),
-    legend.text = element_text(size = 7, color = "black"),
+    legend.text = element_text(size = 6, color = "black"),
     # legend.margin = margin(t=-0.6, unit = "cm"),
-    legend.position = "right",
+    legend.position = "none",
     legend.key.width = unit(5, "mm"),
-  )
+  ) +
+  ylab("") +
+  xlab(expression(paste("adjusted R"^2)))
 
 bp_r2_clim
 

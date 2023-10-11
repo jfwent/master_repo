@@ -14,13 +14,13 @@ library(sf)
 # library(rnaturalearthdata)
 
 # ---- 
-
-
 seg_final <- unique(abund.min40.lc$segment)
 
 seg_tibble <- tibble(segs_fin = seg_final) %>%
   separate(segs_fin, sep = "_", into = c("state", "route", "seg"), remove = F) %>%
   unite(state, route,col= "U_S_R_I")
+
+length(unique(seg_tibble$U_S_R_I))
 
 bbs.routes.segmented.final <- sf::st_read("/Users/jonwent/Downloads/5_segments_final.shp")
 
