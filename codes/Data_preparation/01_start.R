@@ -21,7 +21,7 @@ load("data/Landuse_PC1_PC2.rda")
 climate.df <- climate_df %>%
   select(-c(contains("var"), contains("median")),
          contains("mean"),
-         -c(swb.mean, cmi.annual.mean, pr.diff.mean))
+         -c(pr.sum.mean, cmi.annual.mean, pr.diff.mean))
 
 clim.t1 <- climate.df %>% filter(year == 2001) %>% select(-year)
 

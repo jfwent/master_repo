@@ -26,11 +26,19 @@ full_mods.lc <- list()
 lc.mods <- list()
 clim.mods <- list()
 
+pb <- progress_bar$new(
+  format = "[:bar] :percent | ETA: :eta",
+  total = length(birds),
+  clear = FALSE
+)
+
 set.seed(123)
 
 for(bird.ind in birds){
   
-  print(paste0("working on ", which(birds == bird.ind), "/", length(birds), " ..."))
+  pb$tick()
+  
+  # print(paste0("working on ", which(birds == bird.ind), "/", length(birds), " ..."))
   
   bird.tmp <- abund.min40.lc %>%
     filter(animal_jetz == bird.ind) %>%
@@ -167,7 +175,6 @@ adj_r2_lc_traits <- adj_r2_lc %>%
   left_join(species.traits, by = "bird") %>%
   distinct()
 
-
 # ---- summary stats ----
 
 birds <- unique(adj_r2_lc$bird)
@@ -254,6 +261,10 @@ LOOCV_model_res %>%
   )
 
 adj_r2_lc_traits %>%
+  rowwise() %>%
+  mutate(v.clim = adj.r2 - adj.r2_lc,
+         v.lc = adj.r2 - adj.r2_clim,
+         v.joint = adj.r2 - (adj.r2_lc + adj.r2_clim)) %>%
   select(bird, v.clim, v.joint, v.lc) %>%
   pivot_longer(!bird, names_to = "var.type", values_to = "r2s") %>%
   group_by(var.type) %>%

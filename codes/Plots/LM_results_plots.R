@@ -1,6 +1,6 @@
 # Linear model plots
 
-# ---- library
+# ---- library ----
 
 library(tidyverse)
 library(patchwork)
@@ -108,11 +108,12 @@ adj_r2_lc %>%
 
 # ---- life history traits and variance ----
 
-gen.plot <- adj_r2_lc_traits %>%
+gen.plot <-
+  adj_r2_lc_traits %>%
   drop_na(GenLength) %>%
   mutate(gen.length.bins = cut(GenLength,
                                breaks = c(0, 2.5, 4, 12),
-                               labels = c("short (< 2.5y)", "medium (2.5 - 4y)", "long (> 4y)"))) %>%
+                               labels = c("short", "medium", "long"))) %>%
   group_by(gen.length.bins) %>%
   summarize(mean.v.clim = mean(v.clim),
             mean.v.lc = mean(v.lc),
@@ -132,16 +133,22 @@ gen.plot <- adj_r2_lc_traits %>%
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01) +
-  theme(legend.position = "none") +
+  theme_bw()+
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
   ylim(0, 0.25)
 
 clutch.plot <- adj_r2_lc_traits %>%
   drop_na(Clutch.Bird) %>%
   mutate(clutch.size.bins = cut(Clutch.Bird,
                                 breaks = c(0, 3, 5, 12),
-                                labels = c("small (< 3)",
-                                           "medium (3 - 5)",
-                                           "large (> 5)"))) %>%
+                                labels = c("small",
+                                           "medium",
+                                           "large"))) %>%
   group_by(clutch.size.bins) %>%
   summarize(mean.v.clim = mean(v.clim),
             mean.v.lc = mean(v.lc),
@@ -161,6 +168,13 @@ clutch.plot <- adj_r2_lc_traits %>%
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01) +
+  theme_bw()+
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
   ylim(0, 0.25)
 
 brain.plot <- adj_r2_lc_traits %>%
@@ -189,7 +203,13 @@ brain.plot <- adj_r2_lc_traits %>%
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01) +
-  theme(legend.position = "none") +
+  theme_bw()+
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
   ylim(0, 0.25)
 
 innov.plot <- adj_r2_lc_traits %>%
@@ -216,12 +236,23 @@ innov.plot <- adj_r2_lc_traits %>%
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01) +
+  theme_bw()+
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
   ylim(0, 0.25)
 
-life_history_plot <- gen.plot + clutch.plot + brain.plot + innov.plot
+life_history_plot <- gen.plot + clutch.plot
+intelligence_plot <- brain.plot + innov.plot
 life_history_plot
 
 ggsave(plot = life_history_plot, filename = "figures/LM_results/life_history_traits_adj_r2_stacked.png",
+       width = 8, height = 6, dpi = 300)
+
+ggsave(plot = intelligence_plot, filename = "figures/LM_results/intelligence_traits_adj_r2_stacked.png",
        width = 8, height = 6, dpi = 300)
 
 # ---- ecological traits and variance ----
@@ -250,7 +281,13 @@ diet.plot <-adj_r2_lc_traits %>%
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01) +
-  theme(legend.position = "none") +
+  theme_bw()+
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
   ylim(0, 0.25)
 
 habitat.plot <- adj_r2_lc_traits %>%
@@ -278,7 +315,13 @@ habitat.plot <- adj_r2_lc_traits %>%
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01) +
   ylim(0, 0.25) +
-  theme(legend.position = "none")
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black"))
 
 trophic.niche.plot <- adj_r2_lc_traits %>%
   group_by(Trophic.Niche) %>%
@@ -300,10 +343,17 @@ trophic.niche.plot <- adj_r2_lc_traits %>%
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01)  +
-  theme(legend.position = "none") +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
   ylim(0, 0.5)
 
 trophic.level.plot <- adj_r2_lc_traits %>%
+  drop_na(Trophic.Level) %>%
   group_by(Trophic.Level) %>%
   summarize(mean.v.clim = mean(v.clim),
             mean.v.lc = mean(v.lc),
@@ -324,7 +374,16 @@ trophic.level.plot <- adj_r2_lc_traits %>%
   labs(fill = "Model type") +
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01) +
-  ylim(0, 0.25)
+  ylim(0, 0.25) +
+  scale_x_discrete(breaks = levels(factor(adj_r2_lc_traits$Trophic.Level)),
+                   labels = c("Carn.", "Herb.", "Omni.", "Scav.")) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black"))
 
 ecological_plot <- diet.plot + habitat.plot + trophic.level.plot
 ecological_plot
@@ -338,7 +397,7 @@ mass.plot <-adj_r2_lc_traits %>%
   drop_na(body.mass) %>%
   mutate(body.mass.bins = cut(body.mass,
                               breaks = c(0, 30, 50, 2000),
-                              labels = c("small (< 30 g)", "medium (30 - 50 g)", "large (> 50 g)"))) %>%
+                              labels = c("small", "medium", "large"))) %>%
   group_by(body.mass.bins) %>%
   summarize(mean.v.clim = mean(v.clim),
             mean.v.lc = mean(v.lc),
@@ -359,7 +418,14 @@ mass.plot <-adj_r2_lc_traits %>%
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01) +
   ylim(0,0.25) +
-  theme(legend.position = "none")
+  theme_bw()+
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black"))
+  
 
 wing.plot <- adj_r2_lc_traits %>%
   drop_na(hand.wing.ind) %>%
@@ -386,7 +452,13 @@ wing.plot <- adj_r2_lc_traits %>%
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01) +
   ylim(0,0.25)  +
-  theme(legend.position = "none")
+  theme_bw()+
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black"))
 
 mig.plot <- adj_r2_lc_traits %>%
   drop_na(Migrant) %>%
@@ -402,12 +474,22 @@ mig.plot <- adj_r2_lc_traits %>%
   geom_bar(position = "stack", stat = "identity",
            color = "grey30", alpha = 0.8, size = 0.3) +
   ylab("") +
+  xlab("Migrant status") +
   scale_fill_manual(values=c("grey100", "grey70","grey40"),
                     labels = c("Climate", "Full", "Land cover")) +
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01) +
-  ylim(0,0.25)
+  ylim(0,0.25) +
+  scale_x_discrete(breaks = levels(factor(adj_r2_lc_traits$Migrant)),
+                   labels = c("Full", "No")) +
+  theme_bw()+
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black"))
 
 morph_plot <- mass.plot + wing.plot + mig.plot
 morph_plot
@@ -458,7 +540,13 @@ acad.plot <- adj_r2_lc_traits %>%
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01) +
-  theme(legend.position = "none") +
+  theme_bw()+
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
   ylim(0,0.25)
 
 sauer.plot <- adj_r2_lc_traits %>%
@@ -485,12 +573,279 @@ sauer.plot <- adj_r2_lc_traits %>%
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01) +
-  ylim(0,0.25)
+  ylim(0,0.25) +
+  theme_bw()+
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black"))
 
 pop_stacked <- acad.plot + sauer.plot
 pop_stacked
 
 ggsave(pop_stacked, filename = "figures/LM_results/pop_trends_adj_r2_stacked.png",
+       width = 8, height = 6, dpi = 300)
+
+# ---- LM plots not stacked ----
+
+p1 <-
+  adj_r2_lc_traits %>%
+  drop_na(GenLength) %>%
+  pivot_longer(cols = 18:20, values_to = "adj_r2", names_to = "mods") %>%
+  relocate(adj_r2, mods) %>%
+  ggplot(aes(y = adj_r2, x = log(GenLength), color = mods, fill = mods)) +
+  scale_fill_viridis_d(
+    aesthetics = c("color", "fill"),
+    alpha = 0.6,
+    labels = c("Climate", "Full", "Land cover"),
+    guide = guide_legend(title = "Model"),
+    option = "H",
+  ) +
+  geom_point(size = 2, alpha = 0.8) +
+  geom_smooth(method = "lm",
+              alpha = 0.6,
+              aes(fill = mods)
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey40", linewidth = 0.8) +
+  xlab("log(Generation length)") +
+  ylab("Variance explained") +
+  theme_bw() +
+  theme(
+    legend.position = "none",
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")
+  )
+
+p2 <-
+  adj_r2_lc_traits %>%
+  drop_na(Clutch.Bird) %>%
+  pivot_longer(cols = 18:20, values_to = "adj_r2", names_to = "mods") %>%
+  relocate(adj_r2, mods) %>%
+  ggplot(aes(y = adj_r2, x = Clutch.Bird, color = mods, fill = mods)) +
+  scale_fill_viridis_d(
+    aesthetics = c("color", "fill"),
+    alpha = 0.6,
+    labels = c("Climate", "Full", "Land cover"),
+    guide = guide_legend(title = "Model"),
+    option = "H",
+  ) +
+  geom_point(size = 2, alpha = 0.8) +
+  geom_smooth(method = "lm",
+              alpha = 0.6,
+              aes(fill = mods)
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey40", linewidth = 0.8) +
+  xlab("Clutch size") +
+  ylab("") +
+  theme_bw() +
+  theme(
+    legend.position = "none",
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")
+  )
+
+p3 <-
+  adj_r2_lc_traits %>%
+  drop_na(rel_brain_size) %>%
+  pivot_longer(cols = 18:20, values_to = "adj_r2", names_to = "mods") %>%
+  relocate(adj_r2, mods) %>%
+  ggplot(aes(y = adj_r2, x = rel_brain_size, color = mods, fill = mods)) +
+  scale_fill_viridis_d(
+    aesthetics = c("color", "fill"),
+    alpha = 0.6,
+    labels = c("Climate", "Full", "Land cover"),
+    guide = guide_legend(title = "Model"),
+    option = "H",
+  ) +
+  geom_point(size = 2, alpha = 0.8) +
+  geom_smooth(method = "lm",
+              alpha = 0.6,
+              aes(fill = mods)
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey40", linewidth = 0.8) +
+  xlab("Relative brain size") +
+  ylab("") +
+  theme_bw() +
+  theme(
+    # legend.position = "none",
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")
+  )
+
+# p4 <-
+#   adj_r2_lc_traits %>%
+#   drop_na(tot.innov) %>%
+#   pivot_longer(cols = 18:20, values_to = "adj_r2", names_to = "mods") %>%
+#   relocate(adj_r2, mods) %>%
+#   ggplot(aes(y = adj_r2, x = tot.innov, color = mods, fill = mods)) +
+#   scale_fill_viridis_d(
+#     aesthetics = c("color", "fill"),
+#     alpha = 0.6,
+#     labels = c("Climate", "Full", "Land cover"),
+#     guide = guide_legend(title = "Model"),
+#     option = "H",
+#   ) +
+#   geom_point(size = 2, alpha = 0.8) +
+#   geom_smooth(method = "lm",
+#               alpha = 0.6,
+#               aes(fill = mods)
+#   ) +
+#   geom_hline(yintercept = 0, linetype = "dashed", color = "grey40", linewidth = 0.8) +
+#   xlab("Innovativeness") +
+#   # ylab("Variance explained") +
+#   theme_bw() +
+#   theme(
+#     # legend.position = "none",
+#     panel.border = element_blank(),
+#     panel.grid.major = element_blank(),
+#     panel.grid.minor = element_blank(),
+#     axis.line = element_line(color = "black")
+#   )
+
+life_history_plot_continuous <- p1 + p2 + p3
+life_history_plot_continuous
+
+ggsave(filename = "figures/LM_Results/life_hist_cont_plot.png", plot = life_history_plot_continuous,
+       width = 8, height = 6, dpi = 300)
+
+p4 <-
+  adj_r2_lc_traits %>%
+  drop_na(diet.breadth) %>%
+  pivot_longer(cols = 18:20, values_to = "adj_r2", names_to = "mods") %>%
+  relocate(adj_r2, mods) %>%
+  ggplot(aes(y = adj_r2, x = diet.breadth, color = mods, fill = mods)) +
+  scale_fill_viridis_d(
+    aesthetics = c("color", "fill"),
+    alpha = 0.6,
+    labels = c("Climate", "Full", "Land cover"),
+    guide = guide_legend(title = "Model"),
+    option = "H",
+  ) +
+  geom_point(size = 2, alpha = 0.8) +
+  geom_smooth(method = "lm",
+              alpha = 0.6,
+              aes(fill = mods)
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey40", linewidth = 0.8) +
+  xlab("Diet breadth") +
+  ylab("Variance explained") +
+  theme_bw() +
+  theme(
+    legend.position = "none",
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")
+  )
+
+p5 <-
+  adj_r2_lc_traits %>%
+  drop_na(hab.breadth) %>%
+  pivot_longer(cols = 18:20, values_to = "adj_r2", names_to = "mods") %>%
+  relocate(adj_r2, mods) %>%
+  ggplot(aes(y = adj_r2, x = hab.breadth, color = mods, fill = mods)) +
+  scale_fill_viridis_d(
+    aesthetics = c("color", "fill"),
+    alpha = 0.6,
+    labels = c("Climate", "Full", "Land cover"),
+    guide = guide_legend(title = "Model"),
+    option = "H",
+  ) +
+  geom_point(size = 2, alpha = 0.8) +
+  geom_smooth(method = "lm",
+              alpha = 0.6,
+              aes(fill = mods)
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey40", linewidth = 0.8) +
+  xlab("Habitat breadth") +
+  ylab("") +
+  theme_bw() +
+  theme(
+    # legend.position = "none",
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")
+  )
+
+ecol_traits_plot <- p4 + p5
+ecol_traits_plot
+
+ggsave(filename = "figures/LM_Results/eco_traits_cont_plot.png", plot = ecol_traits_plot,
+       width = 8, height = 6, dpi = 300)
+
+p6 <-
+  adj_r2_lc_traits %>%
+  drop_na(body.mass) %>%
+  pivot_longer(cols = 18:20, values_to = "adj_r2", names_to = "mods") %>%
+  relocate(adj_r2, mods) %>%
+  ggplot(aes(y = adj_r2, x = log(body.mass), color = mods, fill = mods)) +
+  scale_fill_viridis_d(
+    aesthetics = c("color", "fill"),
+    alpha = 0.6,
+    labels = c("Climate", "Full", "Land cover"),
+    guide = guide_legend(title = "Model"),
+    option = "H",
+  ) +
+  geom_point(size = 2, alpha = 0.8) +
+  geom_smooth(method = "lm",
+              alpha = 0.6,
+              aes(fill = mods)
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey40", linewidth = 0.8) +
+  xlab("log(Body mass)") +
+  ylab("Variance explained") +
+  theme_bw() +
+  theme(
+    legend.position = "none",
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")
+  )
+
+p7 <-
+  adj_r2_lc_traits %>%
+  drop_na(hand.wing.ind) %>%
+  pivot_longer(cols = 18:20, values_to = "adj_r2", names_to = "mods") %>%
+  relocate(adj_r2, mods) %>%
+  ggplot(aes(y = adj_r2, x = hand.wing.ind, color = mods, fill = mods)) +
+  scale_fill_viridis_d(
+    aesthetics = c("color", "fill"),
+    alpha = 0.6,
+    labels = c("Climate", "Full", "Land cover"),
+    guide = guide_legend(title = "Model"),
+    option = "H",
+  ) +
+  geom_point(size = 2, alpha = 0.8) +
+  geom_smooth(method = "lm",
+              alpha = 0.6,
+              aes(fill = mods)
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey40", linewidth = 0.8) +
+  xlab("Hand-wind index") +
+  ylab("") +
+  theme_bw() +
+  theme(
+    # legend.position = "none",
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")
+  )
+
+morph_traits_plot <- p6 + p7
+morph_traits_plot
+
+ggsave(filename = "figures/LM_Results/morph_traits_cont_plot.png", plot = morph_traits_plot,
        width = 8, height = 6, dpi = 300)
 
 # ----- all traits ----
@@ -1368,11 +1723,11 @@ coef_plot_innov
 # ===== Old ----
 # ---- continuous traits vs adj. r2 full model ----
 
-p1 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = log(GenLength))) +
+ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = log(GenLength))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
   xlab("log(Generation length)")
-  
+
 p2 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = Clutch.Bird)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm")+
@@ -1390,14 +1745,14 @@ p4 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = hab.breadth)) +
   geom_smooth(method = "lm")+
   xlab("Habitat breadth")
 # ylab("Residuals")
-    
+
 p5 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = log(body.mass))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
   xlab("log(Body mass)") +
   ylab("")
-  
-  p6 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = hand.wing.ind)) +
+
+p6 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = hand.wing.ind)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
   xlab("Hand-wing index") +
@@ -1407,13 +1762,6 @@ p7 <- ggplot(adj_r2_lc_traits, aes(y = adj.r2, x = rel_brain_size)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
   xlab("Relative brain size")
-  
-final_plot <- p1 + p2 + p3 + p4 + p5 + p6 + p7
-
-final_plot
-
-ggsave(filename = "figures/LM_Results/contin_traits_adj_R2_full_LM.png", plot = final_plot,
-       width = 8, height = 6, dpi = 300)
 
 # ---- continuous traits vs adj. r2 climate model ----
 
