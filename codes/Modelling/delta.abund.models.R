@@ -320,7 +320,7 @@ save(lc_model_coefs, file = "results/beta_coefficients_lc_LMs.rda")
 # ---- univariate models ----
 
 birds <- sort(unique(abund.min40.lc$animal_jetz))
-vars <- colnames(abund.min40.lc[4:17])
+vars <- colnames(abund.min40.lc[4:19])
 
 univar_mods <- list()
 
@@ -344,7 +344,8 @@ for(variable.ind in vars){
     bird.tmp <- abund.min40.lc %>%
       filter(animal_jetz == bird.ind)
     
-    form.tmp <- as.formula(paste("delta.abund ~", variable.ind, "+ I(", variable.ind, "^2)"))
+    # form.tmp <- as.formula(paste("delta.abund ~", variable.ind, "+ I(", variable.ind, "^2)"))
+    form.tmp <- as.formula(paste("delta.abund ~", variable.ind))
     
     model.tmp <- caret::train(
       form.tmp,
@@ -363,6 +364,8 @@ for(variable.ind in vars){
 rm(train_control, pb, bird_mods, model.tmp, form.tmp, bird.tmp, birds, vars, variable.ind)
 
 # ---- univariate beta coefs ----
+
+birds <- sort(unique(abund.min40.lc$animal_jetz))
 
 univar_coefs <- tibble(bird = character(),
                            variable = character(),

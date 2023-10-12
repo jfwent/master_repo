@@ -44,9 +44,13 @@ clim.df <- clim.t1 %>% left_join(dclim, by = "segment"); rm(climate_df, climate.
 lc.df <- land_use_area %>%
   select(-c(ecoregion, tot.area.m2, route, barren.area.m2, wet.area.m2)) %>%
   mutate(urban.area.m2 = urban.high.area.m2 + urban.low.area.m2,
-         all.grass.area.m2 = grass.area.m2 + pasture.area.m2) %>%
-  select(-c(urban.high.area.m2, urban.low.area.m2, grass.area.m2,
-            pasture.area.m2)) %>%
+         # all.grass.area.m2 = grass.area.m2 + pasture.area.m2
+         ) %>%
+  select(-c(urban.high.area.m2, urban.low.area.m2,
+            # grass.area.m2,
+            # pasture.area.m2,
+            crop.area.m2
+            )) %>%
   mutate(across(
     .cols = contains("area"),
     .fns = c(
