@@ -1615,6 +1615,16 @@ coef_plot_innov <- p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + p11 + p12 
 coef_plot_innov
 
 
+# ---- save beta coef plots ----
+ggsave(filename = "figures/LM_Results/beta_coef_diet.png", plot = coef_plot_diet,
+       width = 8, height = 6, dpi = 300)
+ggsave(filename = "figures/LM_Results/beta_coef_gen_length.png", plot = coef_plot_gen_length,
+       width = 8, height = 6, dpi = 300)
+ggsave(filename = "figures/LM_Results/beta_coef_innovations.png", plot = coef_plot_innov,
+       width = 8, height = 6, dpi = 300)
+ggsave(filename = "figures/LM_Results/beta_coef_migrant.png", plot = coef_plot_migrant,
+       width = 8, height = 6, dpi = 300)
+
 # ===== Old ----
 # ---- beta coefs vs gen length plots ----
 

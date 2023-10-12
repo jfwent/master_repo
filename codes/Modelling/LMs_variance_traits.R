@@ -22,25 +22,88 @@ species.traits <- species.traits %>%
 
 adj_r2_lc_traits <- adj_r2_lc %>%
   left_join(species.traits, by = "bird") %>%
-  distinct()
+  distinct() %>%
+  rowwise() %>%
+  mutate(v.clim = adj.r2 - adj.r2_lc,
+         v.lc = adj.r2 - adj.r2_clim,
+         v.joint = adj.r2 - (adj.r2_lc + adj.r2_clim))
 
 # ---- LMs ----
 
 traits <- colnames(species.traits[2:14])
-model_types <- 
+model_types <- colnames(adj_r2_lc_traits[18:20])
 
-traits_models <- list()
-
+variance_models <- list()
 
 pb <- progress_bar$new(
   format = "[:bar] :percent | ETA: :eta",
-  total = length(birds),
+  total = length(model_types),
   clear = FALSE
 )
 
+train_control <- caret::trainControl(method = "LOOCV", savePredictions = "final")
+
 set.seed(123)
 
-for()
-for(trait.ind in traits){
+for(mod.types in model_types){
   
+  pb$tick()
+  
+  trait_mods <- list()
+  
+  for(trait.ind in traits){
+    
+    trait.tmp <- adj_r2_lc_traits %>%
+      select(bird, all_of(mod.types), all_of(trait.ind)) %>%
+      na.omit()
+    
+    form.tmp <- as.formula(paste(mod.types, "~", trait.ind))
+    
+    model.tmp <- caret::train(
+      form.tmp,
+      data = trait.tmp,
+      method = "lm",
+      trControl = train_control,
+      preProcess = c("center", "scale", "zv")
+    )
+    
+    trait_mods[[trait.ind]] <- model.tmp
+  }
+  
+  variance_models[[mod.types]] <- trait_mods
 }
+
+rm(pb, train_control, trait_mods, trait.tmp, form.tmp, mod.types, model_types, trait.ind, traits, model.tmp)
+
+# ---- find p-values ----
+
+traits <- colnames(species.traits[2:14])
+model_types <- colnames(adj_r2_lc_traits[18:20])
+
+trait_LM_res <- tibble(trait = character(),
+                       model_type = character(),
+                       beta.coefs = numeric(),
+                       p.val = numeric())
+
+for(model.type.ind in model_types){
+  
+  for(trait.ind in traits){
+    
+    mod.tmp <- variance_models[[model.type.ind]][[trait.ind]]
+    
+    beta.coefs <- coefficients(mod.tmp$finalModel)
+    
+    p.val <- summary(mod.tmp)$coefficients[,4]
+    
+    tib_tmp <- tibble(trait = trait.ind,
+                      model_type = model.type.ind,
+                      beta.coefs = beta.coefs[2],
+                      p.val = p.val[2])
+    
+    trait_LM_res <- bind_rows(trait_LM_res, tib_tmp)
+  }
+}
+
+trait_LM_res %>%
+  filter(p.val < 0.1)
+
