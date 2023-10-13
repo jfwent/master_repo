@@ -39,8 +39,6 @@ coefs_tib <- univar_coefs %>%
   filter(na.num < 13) %>%
   select(-c(contains("crop"), na.num))
 
-# ---- r2 plots ----
-
 adj_r2_lc <- adj_r2_lc %>%
   rowwise() %>%
   mutate(v.clim = adj.r2 - adj.r2_lc,
@@ -52,6 +50,8 @@ adj_r2_lc_traits <- adj_r2_lc_traits %>%
   mutate(v.clim = adj.r2 - adj.r2_lc,
          v.lc = adj.r2 - adj.r2_clim,
          v.joint = adj.r2 - (adj.r2_lc + adj.r2_clim))
+
+# ---- r2 plots ----
 
 ttt <- adj_r2_lc %>%
   dplyr::select(-c(adj.r2, adj.r2_clim, adj.r2_lc)) %>%
@@ -597,12 +597,42 @@ sauer.plot <- adj_r2_lc_traits %>%
   theme_bw()+
   theme(
     panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black"))
+
+init.abund.plot <- adj_r2_lc_traits %>%
+  drop_na(abundance_groups) %>%
+  group_by(abundance_groups) %>%
+  summarize(mean.v.clim = mean(v.clim),
+            mean.v.lc = mean(v.lc),
+            mean.v.joint = mean(v.joint),
+            n_obs = n()) %>%
+  pivot_longer(!c(abundance_groups, n_obs), names_to = "variable", values_to = "variance") %>%
+  ggplot(aes(x = abundance_groups, y = variance,
+             # group = sauer.trend.bins,
+             fill = variable)) +
+  geom_bar(position = "stack", stat = "identity", color = "grey30",
+           alpha = 0.8, linewidth = 0.3) +
+  xlab("Initial abundance") +
+  ylab("") +
+  scale_fill_manual(values=c("grey100", "grey70","grey40"),
+                    labels = c("Climate", "Full", "Land cover")
+  ) +
+  labs(fill = "Model type")  +
+  geom_text(aes(label = n_obs),
+            stat = "count", vjust= -0.2, y = 0.01) +
+  ylim(0,0.4) +
+  theme_bw()+
+  theme(
+    panel.border = element_blank(),
     # legend.position = "none",
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black"))
 
-pop_stacked <- acad.plot + sauer.plot
+pop_stacked <- acad.plot + sauer.plot + init.abund.plot
 pop_stacked
 
 ggsave(pop_stacked, filename = "figures/LM_results/pop_trends_adj_r2_stacked.png",
@@ -866,6 +896,41 @@ morph_traits_plot <- p6 + p7
 morph_traits_plot
 
 ggsave(filename = "figures/LM_Results/morph_traits_cont_plot.png", plot = morph_traits_plot,
+       width = 8, height = 6, dpi = 300)
+
+p8 <-
+  adj_r2_lc_traits %>%
+  drop_na(initial.abundance) %>%
+  pivot_longer(cols = 20:22, values_to = "adj_r2", names_to = "mods") %>%
+  relocate(adj_r2, mods) %>%
+  ggplot(aes(y = adj_r2, x = log(initial.abundance), color = mods, fill = mods)) +
+  scale_fill_viridis_d(
+    aesthetics = c("color", "fill"),
+    alpha = 0.6,
+    labels = c("Climate", "Full", "Land cover"),
+    guide = guide_legend(title = "Model"),
+    option = "H",
+  ) +
+  geom_point(size = 2, alpha = 0.8) +
+  geom_smooth(method = "lm",
+              alpha = 0.6,
+              aes(fill = mods)
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey40", linewidth = 0.8) +
+  xlab("log(Initial abundance)") +
+  ylab("Variance explained") +
+  theme_bw() +
+  theme(
+    # legend.position = "none",
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")
+  )
+
+p8
+
+ggsave(filename = "figures/LM_Results/init_abund_cont_plot.png", plot = p8,
        width = 8, height = 6, dpi = 300)
 
 # ----- all traits ----

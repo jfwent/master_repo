@@ -196,8 +196,25 @@ rm(climate_df, climate.df, clim.t1, dclim)
 # summary(species.traits)
 # 
 # save(species.traits, file = "data/species_traits.rda")
+# 
+# load("data/species_traits.rda")
+# 
+# load("data/BBS.full.stable.min40.rda")
+# 
+# my.init.common <- BBS.stable.full.min40 %>%
+#   filter(year == "2001") %>%
+#   group_by(animal_jetz) %>%
+#   summarize(abund.sum = sum(abund.geom.mean)) %>%
+#   ungroup() %>%
+#   mutate(abundance_groups = cut(abund.sum,
+#                                 breaks = c(0, 100, 1000, 10000, 100000),
+#                                 labels = c("Rare", "Less Common", "Common", "Superabundant")))
+# 
+# species.traits <- species.traits %>%
+#   left_join(my.init.common, by = "animal_jetz") %>%
+#   rename(initial.abundance = abund.sum)
 
-load("data/species_traits.rda")
+save(species.traits, file = "data/species_traits.rda")
 
 # ---- full data sets -----
 
