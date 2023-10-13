@@ -6,6 +6,8 @@
 
 library(tidyverse)
 library(caret)
+library(progress)
+library(patchwork)
 
 # ---- load data ----
 
@@ -146,6 +148,9 @@ d.abund.lc <- d.abund.min40 %>%
 #%>%
 # mutate(delta.abund = as.integer(delta.abund))
 
+rm(BBS.stable.full.min10, BBS.stable.full.min40, BBS.stable.full.min6, clim.df, d.abund.min10,
+   d.abund.min40, d.abund.min6, lc.df)
+
 # ---- LM function ----
 
 fit_lm <- function(df, var) {
@@ -155,18 +160,23 @@ fit_lm <- function(df, var) {
 }
 
 # ---- LM models climate variables ----
+# num_folds <- 10
+
+# clim_rmse <- tibble(bird = character(),
+#                     variable = character(),
+#                     mean_rmse = numeric(),
+#                     n.folds = numeric())
+# significant_terms <- tibble(bird = character(),
+#                             variable = character(),
+#                             p.values = numeric()
+# )
 
 birds <- sort(unique(d.abund.climate$animal_jetz))
+# birds <- sort(unique(abund.min40.lc$animal_jetz))
 climate_vars <- colnames(d.abund.climate[4:17])
 
-set.seed(123)
-
-num_folds <- 10
-
-clim_rmse <- tibble(bird = character(),
-                    variable = character(),
-                    mean_rmse = numeric(),
-                    n.folds = numeric())
+trControl <- trainControl(method = "cv",
+                          number = 10)
 
 r2.clim <- tibble(bird = character(),
                   variable = character(),
@@ -174,17 +184,17 @@ r2.clim <- tibble(bird = character(),
 
 clim_mods <- list()
 
-significant_terms <- tibble(bird = character(),
-                            variable = character(),
-                            p.values = numeric()
+pb <- progress_bar$new(
+  format = "[:bar] :percent | ETA: :eta",
+  total = length(climate_vars),
+  clear = FALSE
 )
 
-trControl <- trainControl(method = "cv",
-                          number = 10)
-
+set.seed(123)
 for(variable.ind in climate_vars){
   
-  print(paste0("working on ", which(climate_vars == variable.ind), "/", length(climate_vars), " ..."))
+  # print(paste0("working on ", which(climate_vars == variable.ind), "/", length(climate_vars), " ..."))
+  pb$tick()
   
   bird_mods <- list()
   
@@ -199,6 +209,15 @@ for(variable.ind in climate_vars){
     
     bird_mods[[bird.ind]] <- full.mod
     
+    adj.r2.now <- summary(full.mod$finalModel)$r.squared
+    
+    # browser()
+    
+    new_row1 <- tibble(bird = bird.ind, variable = variable.ind,
+                       adj.r2 = adj.r2.now)
+    
+    r2.clim <- bind_rows(r2.clim, new_row1)
+    
     # p.val <- summary(full.mod)$coefficients[,4]
     
     # new_row <- tibble(bird = bird.ind,
@@ -207,35 +226,27 @@ for(variable.ind in climate_vars){
     # 
     # significant_terms <- bind_rows(significant_terms, new_row)
     
-    # adj.r2.now <- summary(full.mod)$rsquared
-    
-    clim_mods[[variable.ind]] <- bird_mods
-    
     # mean_rmse <- mean(rmse_values)
-    
-    # new_row1 <- tibble(bird = bird.ind, variable = variable.ind,
-    #                    adj.r2 = adj.r2.now)
-    # 
     # new_row2 <- tibble(bird = bird.ind, mean_rmse = mean_rmse,
     #                    variable = variable.ind, n.folds = length(folds))
     # 
-    # r2.clim <- bind_rows(r2.clim, new_row1)
     # clim_rmse <- bind_rows(clim_rmse, new_row2)
   }
+  
+  clim_mods[[variable.ind]] <- bird_mods
 }
 
 rm(bird_model, variable.ind, climate_vars, birds,
    bird.ind, mean_rmse, n_fold, num_folds, predicted_values, rmse, rmse_values,
    new_row1, new_row2, folds,
    bird.test, bird.tmp, bird.train, full.mod, adj.r2.now,
-   p.val, p.val.ind, p.val.quad, new_row)
+   p.val, p.val.ind, p.val.quad, new_row, trControl, bird_mods, pb)
 
-sig.terms <- significant_terms %>% filter(p.values <= 0.05,
-                                          variable != "(Intercept)",
-                                          variable != grepl("^", variable))
-
-length(unique(sig.terms$bird))
-length(unique(sig.terms$variable))
+# sig.terms <- significant_terms %>% filter(p.values <= 0.05,
+#                                           variable != "(Intercept)",
+#                                           variable != grepl("^", variable))
+# length(unique(sig.terms$bird))
+# length(unique(sig.terms$variable))
 
 # ---- LM models land use variables ----
 
@@ -344,20 +355,29 @@ bp_rmse_clim <- clim_rmse %>%
   )
 
 bp_r2_clim <- r2.clim %>%
-  ggplot2::ggplot(aes(y = variable, x = adj.r2, fill = variable)) +
+  ggplot2::ggplot(aes(y = reorder(variable, adj.r2), x = adj.r2,
+                      fill = reorder(variable, adj.r2)
+                      )) +
+  scale_fill_viridis_d(
+    aesthetics = c("fill"),
+    alpha = 0.6,
+    # labels = c("Climate", "Full", "Land cover"),
+    # guide = guide_legend(title = "Model"),
+    option = "H",
+  ) +
   geom_boxplot(width = 0.3,
                outlier.size = 1,
                alpha = 0.5) +
-  geom_point(
-    aes (color = variable),
-    shape = "|",
-    size = 1.8,
-    alpha = 0.7,
-    position = position_nudge(y = -0.275)
-  ) +
+  # geom_point(
+  #   aes (color = variable),
+  #   shape = "|",
+  #   size = 1.8,
+  #   alpha = 0.7,
+  #   position = position_nudge(y = -0.275)
+  # ) +
   ggdist::stat_slab(
-    position = position_nudge(y = 0.200),
-    height = 0.55
+    position = position_nudge(y = 0.300),
+    height = 0.5
   )+
   stat_summary(
     fun.data = mean_se, # Use mean and standard error
@@ -365,17 +385,88 @@ bp_r2_clim <- r2.clim %>%
     color = "black",
     size = 1.5
   ) +
+  theme_bw() +
   theme(
-    # legend.key.size = unit(5, "mm"),
+    # legend.position = "none",
+    panel.border = element_blank(),
+    # panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black"),
+    axis.text.y = element_text(size = 6),
     legend.text = element_text(size = 7, color = "black"),
     legend.margin = margin(t=-0.6, unit = "cm"),
-    legend.position = "right",
+    legend.position = "none",
     legend.key.width = unit(5, "mm"),
-  )
+    # legend.key.size = unit(5, "mm"),
+  )+
+  ylab("") +
+  xlab(expression(paste("adj. R"^2)))
 
 bp_r2_clim
 
-ggplot2::ggsave(filename = "figures/ClimVar_adj_r2_dAbund.png", plot = bp_r2_clim, width = 8, height = 6, dpi = 300)
+bp_r2_clim_83birds <- ttt %>%
+  ggplot2::ggplot(aes(y = reorder(variable, adj.r2), x = adj.r2,
+                      fill = reorder(variable, adj.r2)
+  )) +
+  scale_y_discrete(breaks = c("delta.cmi.diff.mean", "delta.pr.sum.mean", "delta.tmax.mean",
+                              "delta.pr.diff.mean", "delta.cmi.annual.mean", "tmax.mean",
+                              "delta.swb.mean", 
+                              "tmin.mean", "cmi.diff.mean", "pr.diff.mean",
+                              "swb.mean", "delta.tmin.mean", "cmi.annual.mean", "pr.sum.mean"),
+                   labels = c("+ delta.cmi.diff", "* delta.pr", "delta.tmax",
+                              "+ delta.pr.diff", "* delta.cmi", "tmax", "* delta.swb", 
+                              "tmin", "— cmi.diff", "— pr.diff", "º swb", "delta.tmin", "º cmi", "º pr")) +
+  scale_fill_viridis_d(
+    aesthetics = c("fill"),
+    alpha = 0.6,
+    # guide = guide_legend(title = "Model"),
+    option = "H",
+  ) +
+  geom_boxplot(width = 0.3,
+               outlier.size = 1,
+               alpha = 0.5) +
+  # geom_point(
+  #   aes (color = variable),
+  #   shape = "|",
+  #   size = 1.8,
+  #   alpha = 0.7,
+  #   position = position_nudge(y = -0.275)
+  # ) +
+  ggdist::stat_slab(
+    position = position_nudge(y = 0.300),
+    height = 0.63
+  )+
+  stat_summary(
+    fun.data = mean_se, # Use mean and standard error
+    geom = "point",
+    color = "black",
+    size = 1.5
+  ) +
+  theme_bw() +
+  theme(
+    # legend.position = "none",
+    panel.border = element_blank(),
+    # panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black"),
+    axis.text.y = element_text(size = 9),
+    axis.text.x = element_text(size = 9),
+    # legend.text = element_text(size = 7, color = "black"),
+    # legend.margin = margin(t=-0.6, unit = "cm"),
+    legend.position = "none",
+    # legend.key.width = unit(5, "mm"),
+    # legend.key.size = unit(5, "mm"),
+  ) +
+  ylab("") +
+  xlab(expression(paste("adj. R"^2)))
+
+bp_r2_clim_83birds
+
+bp_vergleich <- bp_r2_clim + bp_r2_clim_83birds
+
+bp_vergleich
+
+ggplot2::ggsave(filename = "figures/ClimVar_adj_r2_dAbund.png", plot = bp_r2_clim_83birds, width = 8, height = 6, dpi = 300)
 
 # ---- build land use boxplots ----
 

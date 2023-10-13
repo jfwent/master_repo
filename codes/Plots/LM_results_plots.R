@@ -69,16 +69,24 @@ all_species_stacked <-
   pivot_longer(!bird, names_to = "var.type", values_to = "r2s") %>%
   group_by(var.type) %>%
   add_row(.data = ttt) %>%
-  ggplot(aes(y = reorder(bird, r2s), x = r2s, fill = var.type)) +
+  ggplot(aes(x = reorder(bird, r2s), y = r2s, fill = var.type)) +
   geom_bar(position = "stack", stat = "identity",
            color = "grey40", alpha = 0.9, linewidth = 0.2,
            width = 0.7) +
   scale_fill_manual(values=c("grey100", "grey70","grey40"),
                     labels = c("Climate", "Full", "Land cover")) +
-  ylab("") +
-  xlab(expression(paste("adj. R"^2))) +
-  theme(axis.text.y = element_text(size = 6)) +
-  labs(fill = "Model type")
+  xlab("") +
+  ylab(expression(paste("adj. R"^2))) +
+  labs(fill = "Model type") +
+  theme_bw() +
+  theme(
+    # legend.position = "none",
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black"),
+    axis.text.y = element_text(size = 6)
+  )
 
 all_species_stacked
 
