@@ -18,7 +18,7 @@ load("data/species_traits.rda")
 
 species.traits <- species.traits %>%
   rename(bird =  animal_jetz) %>%
-  dplyr::select(-c(Common.Name, tot_diet_div, shannon, Clutch))
+  dplyr::select(-c(Common.Name, tot_diet_div, shannon, Clutch, abundance_groups))
 
 adj_r2_lc_traits <- adj_r2_lc %>%
   left_join(species.traits, by = "bird") %>%
@@ -30,8 +30,8 @@ adj_r2_lc_traits <- adj_r2_lc %>%
 
 # ---- LMs ----
 
-traits <- colnames(species.traits[2:14])
-model_types <- colnames(adj_r2_lc_traits[18:20])
+traits <- colnames(species.traits[2:15])
+model_types <- colnames(adj_r2_lc_traits[19:21])
 
 variance_models <- list()
 
@@ -77,8 +77,8 @@ rm(pb, train_control, trait_mods, trait.tmp, form.tmp, mod.types, model_types, t
 
 # ---- find p-values ----
 
-traits <- colnames(species.traits[2:14])
-model_types <- colnames(adj_r2_lc_traits[18:20])
+traits <- colnames(species.traits[2:15])
+model_types <- colnames(adj_r2_lc_traits[19:21])
 
 trait_LM_res <- tibble(trait = character(),
                        model_type = character(),
@@ -106,4 +106,3 @@ for(model.type.ind in model_types){
 
 trait_LM_res %>%
   filter(p.val < 0.1)
-
