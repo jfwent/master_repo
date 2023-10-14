@@ -45,13 +45,107 @@ species.traits.sub <- species.traits %>%
 
 xtable(species.traits.sub, caption = "Bird species traits")
 
-# ----- land use change ---- 
+# ---- variance ---- 
 
-load("data/Land_use/land_use_area_t1_t2.rda")
+adj_r2_lc %>%
+  ungroup() %>%
+  summarize(
+    mean_v_join = mean(v.joint),
+    median_vjoin = median(v.joint),
+    sd_vjoin = sd(v.joint),
+    mean_vclim = mean(v.clim),
+    median_vclim = median(v.clim),
+    sd_vclim = sd(v.clim),
+    mean_vlc = mean(v.lc),
+    median_vlc = median(v.lc),
+    sd_vlc = sd(v.lc)
+  )
 
 
+# ---- land use change ----
 
+lc.df %>%
+  select(segment, contains("delta")) %>%
+  ungroup() %>%
+  pivot_longer(cols = 2:5, names_to = "var", values_to = "val") %>%
+  group_by(var) %>%
+  summarize(
+    mean = mean(val),
+    median = median(val),
+    sd = sd(val)
+  )
 
+lc.df %>%
+  select(segment, contains("delta")) %>%
+  ungroup() %>%
+  pivot_longer(cols = 2:5, names_to = "var", values_to = "val") %>%
+  ggplot(aes(y = val, x = var)) +
+  geom_violin()
 
+lc.df %>%
+  select(segment, contains("delta")) %>%
+  ungroup() %>%
+  pivot_longer(cols = 2:5, names_to = "var", values_to = "val") %>%
+  ggplot(aes(x = val, y = var)) +
+  ggridges::geom_density_ridges_gradient(
+    scale = 1,
+    rel_min_height = 0.005
+  ) +
+  xlim(-2, 2)
 
+lc.df %>%
+  select(segment, contains("delta")) %>%
+  ungroup() %>%
+  # pivot_longer(cols = 2:5, names_to = "var", values_to = "val") %>%
+  ggplot() +
+  # geom_histogram(aes(x = delta.urban.area.m2.log), bins = 80) +
+  geom_histogram(aes(x = delta.forest.area.m2.log), bins = 80)
 
+# ---- climate change -----
+
+clim.df %>%
+  select(segment, contains("delta")) %>%
+  ungroup() %>%
+  pivot_longer(cols = 2:5, names_to = "var", values_to = "val") %>%
+  group_by(var) %>%
+  summarize(
+    mean = mean(val),
+    median = median(val),
+    sd = sd(val)
+  )
+
+moist <- clim.df %>%
+  select(segment, contains("delta")) %>%
+  ungroup() %>%
+  pivot_longer(cols = c(delta.cmi.diff.mean, delta.swb.mean), names_to = "var", values_to = "val") %>%
+  ggplot(aes(x = var, y = val, group = var)) +
+  geom_boxplot()
+
+moist
+
+temp <- clim.df %>%
+  select(segment, contains("delta")) %>%
+  ungroup() %>%
+  pivot_longer(cols = c(delta.tmax.mean, delta.tmin.mean), names_to = "var", values_to = "val") %>%
+  ggplot(aes(x = var, y = val, group = var)) +
+  geom_boxplot()
+
+temp
+
+# ---- 
+
+ttt <- adj_r2_lc %>%
+  select(bird, adj.r2, adj.r2_clim, adj.r2_lc) %>%
+  arrange(bird)
+
+adj_r2_lc %>%
+  select(bird, adj.r2, adj.r2_clim, adj.r2_lc) %>%
+  pivot_longer(cols = 2:4, names_to = "variable", values_to = "values") %>%
+  group_by(variable) %>%
+  summarize(
+    mean = mean(values),
+    sd = sd(values),
+    median = median(values)
+  )
+
+xtable(ttt)

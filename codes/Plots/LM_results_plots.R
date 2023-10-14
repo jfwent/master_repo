@@ -61,7 +61,6 @@ ttt <- adj_r2_lc %>%
   mutate(bird = "Mean") %>%
   relocate(bird)
 
-
 # All species
 all_species_stacked <-
   adj_r2_lc %>%
@@ -160,8 +159,11 @@ gen.plot <-
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black")) +
-  ylim(0, 0.25)
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylim(-0.02, 0.25)
 
+gen.plot
+  
 clutch.plot <- adj_r2_lc_traits %>%
   drop_na(Clutch.Bird) %>%
   mutate(clutch.size.bins = cut(Clutch.Bird,
@@ -195,7 +197,8 @@ clutch.plot <- adj_r2_lc_traits %>%
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black")) +
-  ylim(0, 0.25)
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylim(-0.02, 0.25)
 
 brain.plot <- adj_r2_lc_traits %>%
   drop_na(rel_brain_size) %>%
@@ -230,7 +233,8 @@ brain.plot <- adj_r2_lc_traits %>%
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black")) +
-  ylim(0, 0.25)
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylim(-0.02, 0.25)
 
 innov.plot <- adj_r2_lc_traits %>%
   drop_na(tot.innov) %>%
@@ -263,11 +267,14 @@ innov.plot <- adj_r2_lc_traits %>%
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black")) +
-  ylim(0, 0.25)
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylim(-0.02, 0.25)
 
 life_history_plot <- gen.plot + clutch.plot
 intelligence_plot <- brain.plot + innov.plot
+
 life_history_plot
+intelligence_plot
 
 ggsave(plot = life_history_plot, filename = "figures/LM_results/life_history_traits_adj_r2_stacked.png",
        width = 8, height = 6, dpi = 300)
@@ -308,7 +315,10 @@ diet.plot <-adj_r2_lc_traits %>%
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black")) +
-  ylim(0, 0.25)
+  ylim(-0.02, 0.25) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")
+
+diet.plot
 
 habitat.plot <- adj_r2_lc_traits %>%
   drop_na(hab.breadth) %>%
@@ -334,17 +344,21 @@ habitat.plot <- adj_r2_lc_traits %>%
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01) +
-  ylim(0, 0.25) +
+  ylim(-0.02, 0.25) +
   theme_bw() +
   theme(
     panel.border = element_blank(),
-    legend.position = "none",
+    # legend.position = "none",
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    axis.line = element_line(color = "black"))
+    axis.line = element_line(color = "black"))+
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")
+
+habitat.plot
 
 trophic.niche.plot <- adj_r2_lc_traits %>%
   group_by(Trophic.Niche) %>%
+  drop_na(Trophic.Niche) %>%
   summarize(mean.v.clim = mean(v.clim),
             mean.v.lc = mean(v.lc),
             mean.v.joint = mean(v.joint),
@@ -360,6 +374,8 @@ trophic.niche.plot <- adj_r2_lc_traits %>%
   ylab(expression(paste("adj. R"^2))) +
   scale_fill_manual(values=c("grey100", "grey70","grey40"),
                     labels = c("Climate", "Full", "Land cover")) +
+  scale_x_discrete(labels = c("Frug.","Gran.", "Invert.", "Omni.", "Scav."),
+                   breaks = levels(factor(adj_r2_lc_traits$Trophic.Niche))) +
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01)  +
@@ -369,8 +385,11 @@ trophic.niche.plot <- adj_r2_lc_traits %>%
     legend.position = "none",
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    axis.line = element_line(color = "black")) +
-  ylim(0, 0.5)
+    axis.line = element_line(color = "black"))+
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylim(-0.08, 0.35)
+
+trophic.niche.plot
 
 trophic.level.plot <- adj_r2_lc_traits %>%
   drop_na(Trophic.Level) %>%
@@ -394,7 +413,7 @@ trophic.level.plot <- adj_r2_lc_traits %>%
   labs(fill = "Model type") +
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01) +
-  ylim(0, 0.25) +
+  ylim(-0.08, 0.35) +
   scale_x_discrete(breaks = levels(factor(adj_r2_lc_traits$Trophic.Level)),
                    labels = c("Carn.", "Herb.", "Omni.", "Scav.")) +
   theme_bw() +
@@ -403,17 +422,26 @@ trophic.level.plot <- adj_r2_lc_traits %>%
     # legend.position = "none",
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    axis.line = element_line(color = "black"))
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")
 
-ecological_plot <- diet.plot + habitat.plot + trophic.level.plot
+trophic.level.plot
+
+ecological_plot <- diet.plot + habitat.plot
 ecological_plot
+
+trophic_plot <- trophic.niche.plot + trophic.level.plot
+trophic_plot
 
 ggsave(plot = ecological_plot, filename = "figures/LM_results/eco_traits_adj_r2_stacked.png",
        width = 8, height = 6, dpi = 300)
 
+ggsave(plot = trophic_plot, filename = "figures/LM_results/trophic_traits_adj_r2_stacked.png",
+       width = 8, height = 6, dpi = 300)
+
 # ---- morphological traits and variance ----
 
-mass.plot <-adj_r2_lc_traits %>%
+mass.plot <- adj_r2_lc_traits %>%
   drop_na(body.mass) %>%
   mutate(body.mass.bins = cut(body.mass,
                               breaks = c(0, 30, 50, 2000),
@@ -437,15 +465,17 @@ mass.plot <-adj_r2_lc_traits %>%
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01) +
-  ylim(0,0.25) +
+  ylim(-0.02,0.25) +
   theme_bw()+
   theme(
     panel.border = element_blank(),
     legend.position = "none",
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    axis.line = element_line(color = "black"))
-  
+    axis.line = element_line(color = "black"))+
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")
+
+mass.plot
 
 wing.plot <- adj_r2_lc_traits %>%
   drop_na(hand.wing.ind) %>%
@@ -471,14 +501,15 @@ wing.plot <- adj_r2_lc_traits %>%
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01) +
-  ylim(0,0.25)  +
+  ylim(-0.02,0.25)  +
   theme_bw()+
   theme(
     panel.border = element_blank(),
     legend.position = "none",
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    axis.line = element_line(color = "black"))
+    axis.line = element_line(color = "black"))+
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")
 
 mig.plot <- adj_r2_lc_traits %>%
   drop_na(Migrant) %>%
@@ -500,7 +531,7 @@ mig.plot <- adj_r2_lc_traits %>%
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01) +
-  ylim(0,0.25) +
+  ylim(-0.02,0.25) +
   scale_x_discrete(breaks = levels(factor(adj_r2_lc_traits$Migrant)),
                    labels = c("Full", "No")) +
   theme_bw()+
@@ -509,7 +540,8 @@ mig.plot <- adj_r2_lc_traits %>%
     # legend.position = "none",
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    axis.line = element_line(color = "black"))
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")
 
 morph_plot <- mass.plot + wing.plot + mig.plot
 morph_plot
@@ -567,7 +599,8 @@ acad.plot <- adj_r2_lc_traits %>%
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black")) +
-  ylim(0,0.4)
+  ylim(-0.02, 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")
 
 sauer.plot <- adj_r2_lc_traits %>%
   drop_na(sauer.trend) %>%
@@ -593,14 +626,15 @@ sauer.plot <- adj_r2_lc_traits %>%
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01) +
-  ylim(0,0.4) +
+  ylim(-0.02,0.4) +
   theme_bw()+
   theme(
     panel.border = element_blank(),
     legend.position = "none",
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    axis.line = element_line(color = "black"))
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")
 
 init.abund.plot <- adj_r2_lc_traits %>%
   drop_na(abundance_groups) %>%
@@ -623,14 +657,17 @@ init.abund.plot <- adj_r2_lc_traits %>%
   labs(fill = "Model type")  +
   geom_text(aes(label = n_obs),
             stat = "count", vjust= -0.2, y = 0.01) +
-  ylim(0,0.4) +
+  ylim(-0.02,0.4) +
   theme_bw()+
   theme(
     panel.border = element_blank(),
     # legend.position = "none",
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    axis.line = element_line(color = "black"))
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")
+
+init.abund.plot
 
 pop_stacked <- acad.plot + sauer.plot + init.abund.plot
 pop_stacked
@@ -1688,6 +1725,154 @@ coef_plot_innov <- p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + p11 + p12 
 coef_plot_innov
 
 
+# ---- beta coefs vs initial abundance plots ----
+
+p2 <- coefs_tib %>%
+  drop_na(delta.tmax.mean) %>%
+  ggplot(aes(y = `delta.tmax.mean`, x = log(initial.abundance))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Initial abundance)")
+
+p1 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(tmax.mean) %>%
+  ggplot(aes(y = `tmax.mean`, x = log(initial.abundance))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Initial abundance)")
+
+p4 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(delta.tmin.mean) %>%
+  ggplot(aes(y = `delta.tmin.mean`, x = log(initial.abundance))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Initial abundance)")
+
+p3 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(tmin.mean) %>%
+  ggplot(aes(y = `tmin.mean`, x = log(initial.abundance))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Initial abundance)")
+
+p6 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(delta.swb.mean) %>%
+  ggplot(aes(y = `delta.swb.mean`, x = log(initial.abundance))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Initial abundance)")
+
+p5 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(swb.mean) %>%
+  ggplot(aes(y = `swb.mean`, x = log(initial.abundance))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Initial abundance)")
+
+p7 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(cmi.diff.mean) %>%
+  ggplot(aes(y = `cmi.diff.mean`, x = log(initial.abundance))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Initial abundance)")
+
+p8 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(delta.cmi.diff.mean) %>%
+  ggplot(aes(y = `delta.cmi.diff.mean`, x = log(initial.abundance))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Initial abundance)")
+
+p9 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(urban.area.m2.log) %>%
+  ggplot(aes(y = `urban.area.m2.log`, x = log(initial.abundance))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Initial abundance)")
+
+p10 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(delta.urban.area.m2.log) %>%
+  ggplot(aes(y = `delta.urban.area.m2.log`, x = log(initial.abundance))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Initial abundance)")
+
+p11 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(pasture.area.m2.log) %>%
+  ggplot(aes(y = `pasture.area.m2.log`, x = log(initial.abundance))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Initial abundance)")
+
+p12 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(delta.pasture.area.m2.log) %>%
+  ggplot(aes(y = `delta.pasture.area.m2.log`, x = log(initial.abundance))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Initial abundance)")
+
+p14 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(delta.forest.area.m2.log) %>%
+  ggplot(aes(y = `delta.forest.area.m2.log`, x = log(initial.abundance))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Initial abundance)")
+
+p13 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(forest.area.m2.log) %>%
+  ggplot(aes(y = `forest.area.m2.log`, x = log(initial.abundance))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Initial abundance)")
+
+p15 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(grass.area.m2.log) %>%
+  ggplot(aes(y = `grass.area.m2.log`, x = log(initial.abundance))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Initial abundance)")
+
+p16 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(delta.grass.area.m2.log) %>%
+  ggplot(aes(y = `delta.grass.area.m2.log`, x = log(initial.abundance))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Initial abundance)")
+
+coef_plot_abund <- p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + p11 + p12 + p13 + p14 + p15 + p16 
+
+coef_plot_abund
+
 # ---- save beta coef plots ----
 ggsave(filename = "figures/LM_Results/beta_coef_diet.png", plot = coef_plot_diet,
        width = 8, height = 6, dpi = 300)
@@ -1696,6 +1881,8 @@ ggsave(filename = "figures/LM_Results/beta_coef_gen_length.png", plot = coef_plo
 ggsave(filename = "figures/LM_Results/beta_coef_innovations.png", plot = coef_plot_innov,
        width = 8, height = 6, dpi = 300)
 ggsave(filename = "figures/LM_Results/beta_coef_migrant.png", plot = coef_plot_migrant,
+       width = 8, height = 6, dpi = 300)
+ggsave(filename = "figures/LM_Results/beta_coef_abund.png", plot = coef_plot_abund,
        width = 8, height = 6, dpi = 300)
 
 # ===== Old ----
