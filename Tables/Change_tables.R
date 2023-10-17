@@ -10,11 +10,11 @@ library(xtable)
 library(stargazer)
 library(tidyverse)
 
-# ---- 
+# ---- load bird data ----
 load("data/d.abund.min40.rda")
 load("data/species_traits.rda")
 
-# ----
+# ---- prepare traits data ----
 
 final_birds <- unique(abund.min40.lc$animal_jetz)
 
@@ -61,6 +61,31 @@ adj_r2_lc %>%
     sd_vlc = sd(v.lc)
   )
 
+adj_r2_lc %>%
+  ungroup() %>%
+  filter(v.joint < 0) %>%
+  summarize(n_obs = n(),
+            pct = n()/83*100)
+
+adj_r2_lc %>%
+  ungroup() %>%
+  filter(v.joint > v.clim | v.joint > v.lc) %>%
+  summarize(n_obs = n(),
+            pct = n()/83*100)
+
+adj_r2_lc %>%
+  ungroup() %>%
+  filter(v.joint < v.clim | v.joint < v.lc,
+         v.joint > 0) %>%
+  summarize(n_obs = n(),
+            pct = n()/83*100)
+
+adj_r2_lc %>%
+  ungroup() %>%
+  filter(v.joint == v.clim | v.joint == v.lc) %>%
+  summarize(n_obs = n(),
+            pct = n()/83*100)
+
 
 # ---- land use change ----
 
@@ -101,6 +126,22 @@ lc.df %>%
   # geom_histogram(aes(x = delta.urban.area.m2.log), bins = 80) +
   geom_histogram(aes(x = delta.forest.area.m2.log), bins = 80)
 
+dlc %>%
+  ungroup() %>%
+  summarize(
+    across(
+      .cols = matches("delta"),
+      .fns = list(
+        mean = \(.) mean(.),
+        # median = \(.) median(.),
+        sd = \(.) sd(.)
+      ),
+      .names = "{.fn}.{col}"
+    )
+  ) %>%
+  pivot_longer(cols = 1:8, names_to = "var", values_to = "values") #%>%
+# mutate(pct_change = values/400000)
+
 # ---- climate change -----
 
 clim.df %>%
@@ -131,6 +172,20 @@ temp <- clim.df %>%
   geom_boxplot()
 
 temp
+
+dclim %>%
+  ungroup() %>%
+  summarize(
+    across(
+      .cols = matches("delta"),
+      .fns = list(
+        mean = \(.) mean(.),
+        sd = \(.) sd(.)
+      ),
+      .names = "{.fn}.{col}"
+    )
+  ) %>%
+  pivot_longer(cols = 1:8, names_to = "var", values_to = "values")
 
 # ---- 
 

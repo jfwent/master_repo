@@ -243,7 +243,7 @@ rm(my.birds)
 
 
 # ---- filter for complete cases ----
-
+load("data/BBS.full.stable.min40.rda")
 # ---- prepare the bioclim data ----
 
 climate.df <- climate_df %>%
@@ -402,6 +402,19 @@ BBS.stable.full.min40 <- BBS.stable.full.complete2 %>%
 # length(unique(BBS.stable.full.min40$segment)) # 1709 segments retained
 
 # ---- delta abundances without double 0's for complete cases ------
+
+
+BBS.stable.full.min40 %>%
+  select(year, segment, abund.geom.mean) %>%
+  ungroup() %>%
+  arrange(animal_jetz, segment, year) %>%
+  filter(animal_jetz %in% abund.min40.lc$animal_jetz) %>%
+  group_by(animal_jetz, segment) %>%
+  mutate(delta.abund = abund.geom.mean - lag(abund.geom.mean)) %>%
+  # mutate(pct_change = (delta.abund/lead(abund.geom.mean))*100) %>%
+  filter(all(abund.geom.mean !=0)) %>%
+  group_by(animal_jetz, year) %>%
+  mutate(tot_abund = sum(abund.geom.mean))
 
 d.abund2 <- BBS.stable.full.complete2 %>%
   arrange(animal_jetz, segment) %>%
