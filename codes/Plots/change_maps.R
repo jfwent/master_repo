@@ -20,7 +20,7 @@ load("data/species_traits.rda")
 
 seg_final <- unique(abund.min40.lc$segment)
 
-bbs.routes.segmented.final <- sf::st_read("/Users/jonwent/Downloads/5_segments_final.shp")
+bbs.routes.segmented.final <- sf::st_read("/Users/jonwent/Desktop/ETHZ/master_thesis/Data/5_segments_final.shp")
 
 epsg_5070 <- "+proj=aea +lat_0=23 +lon_0=-96 +lat_1=29.5 +lat_2=45.5 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs "
 
@@ -39,7 +39,9 @@ bbs.routes <- bbs.routes.segmented.final %>%
   ) %>%
   sf::st_transform(crs = epsg_5070)
 
-bbs.routes.buffered <- bbs.routes %>% sf::st_buffer(500)
+bbs.routes.buffered <- bbs.routes %>% sf::st_buffer(dist = 10000)
+
+?sf::st_buffer
 
 usa_state <- sf::st_as_sf(maps::map("state", fill=TRUE, plot =FALSE))
 usa <- sf::st_as_sf(maps::map("usa", fill=TRUE, plot =FALSE))
@@ -308,37 +310,25 @@ usa_map_tmax <- ggplot() +
   ) +
   geom_sf(data = bbs.clim,
           aes(
-            # fill = delta.tmax.mean,
+            fill = delta.tmax.mean,
             color = delta.tmax.mean
           ),
           # linewidth = 1,
-          alpha = 0.7
+          alpha = 1
   ) +
-  guides(fill="none") +
   theme_bw() +
   scale_colour_viridis_c(option = "magma")+
-  labs("delta Tmax")
-
-ggsave(usa_map_tmax, file = "figures/usa_map_tmax.png", width = 8, height = 6, dpi = 300)
-
-usa_map_cmi <- ggplot() +
-  geom_sf(data = usa_5070,
-          fill = "white", color = "grey20", linewidth = 0.3, alpha = 0.8
+  scale_fill_viridis_c(option = "magma") +
+  guides(
+    fill= "none",
+    # guide_legend = "delta Tmax",
+    color = guide_colorbar("delta Tmax")
   ) +
-  geom_sf(data = bbs.clim,
-          aes(
-            # fill = delta.cmi.diff.mean,
-            color = delta.cmi.diff.mean
-          ),
-          # linewidth = 1,
-          alpha = 0.7
-  ) +
-  guides(fill="none") +
-  theme_bw() +
-  scale_colour_viridis_c(option = "magma") +
-  labs("delta CMI")
+  theme(legend.position = "bottom")
 
-ggsave(usa_map_cmi, file = "figures/usa_map_cmi.png", width = 8, height = 6, dpi = 300)
+usa_map_tmax
+
+# ggsave(usa_map_tmax, file = "figures/usa_map_tmax.png", width = 8, height = 6, dpi = 300)
 
 usa_map_tmin <- ggplot() +
   geom_sf(data = usa_5070,
@@ -346,17 +336,25 @@ usa_map_tmin <- ggplot() +
   ) +
   geom_sf(data = bbs.clim,
           aes(
-            fill = delta.cmi.diff.mean,
+            fill = delta.tmin.mean,
             color = delta.tmin.mean
           ),
           # linewidth = 1,
-          alpha = 0.7
+          alpha = 1
   ) +
-  guides(fill="none") +
   theme_bw() +
   scale_color_viridis_c(option = "magma",
                          # guide = guide_legend(title = "delta Tmin")
-                         )
+                         ) +
+  scale_fill_viridis_c(option = "magma")  +
+  guides(
+    fill= "none",
+    # guide_legend = "delta Tmax",
+    color = guide_colorbar("delta Tmin")
+  ) +
+  theme(legend.position = "bottom")
+
+usa_map_tmin
 
 ggsave(usa_map_tmin, file = "figures/usa_map_tmin.png", width = 8, height = 6, dpi = 300)
 
@@ -366,19 +364,65 @@ usa_map_swb <- ggplot() +
   ) +
   geom_sf(data = bbs.clim,
           aes(
-            fill = delta.cmi.diff.mean,
+            fill = delta.swb.mean,
             color = delta.swb.mean
           ),
           # linewidth = 1,
-          alpha = 0.7
+          alpha = 1
   ) +
-  guides(fill="none") +
   theme_bw() +
-  scale_colour_viridis_c(option = "magma",
-                         # guide = guide_legend(title = "delta SWB")
-                         )
+  scale_colour_viridis_c(option = "magma") +
+  scale_fill_viridis_c(option = "magma")  +
+  guides(
+    fill= "none",
+    # guide_legend = "delta Tmax",
+    color = guide_colorbar("delta SWB"),
+    legend.position = "top"
+  ) +
+  theme(legend.position = "bottom")
+
+usa_map_swb
 
 ggsave(usa_map_swb, file = "figures/usa_map_swb.png", width = 8, height = 6, dpi = 300)
+
+usa_map_cmi <- ggplot() +
+  geom_sf(data = usa_5070,
+          fill = "white", color = "grey20", linewidth = 0.3, alpha = 0.8
+  ) +
+  geom_sf(data = bbs.clim,
+          aes(
+            fill = delta.cmi.diff.mean,
+            color = delta.cmi.diff.mean
+          ),
+          # linewidth = 1,
+          alpha = 1
+  ) +
+  theme_bw() +
+  scale_colour_viridis_c(option = "magma") +
+  scale_fill_viridis_c(option = "magma")  +
+  guides(
+    fill= "none",
+    # guide_legend = "delta Tmax",
+    color = guide_colorbar("delta CMI diff.")
+  ) +
+  theme(legend.position = "bottom")
+
+usa_map_cmi
+
+ggsave(usa_map_cmi, file = "figures/usa_map_cmi.png", width = 8, height = 6, dpi = 300)
+
+temp_change_map <- usa_map_tmax + usa_map_tmin
+temp_change_map
+
+ggsave(temp_change_map, file = "figures/temp_change_map.png", width = 8, height = 6, dpi = 300)
+
+moist_change_map <- usa_map_cmi + usa_map_swb
+moist_change_map
+
+ggsave(moist_change_map, file = "figures/moist_change_map.png", width = 8, height = 6, dpi = 300)
+
+clim_change_map <- usa_map_tmax + usa_map_tmin + usa_map_swb + usa_map_cmi
+clim_change_map
 
 
 # ---- land cover change maps ----
@@ -389,35 +433,56 @@ usa_map_forest <- ggplot() +
   ) +
   geom_sf(data = bbs.lc,
           aes(
-            # fill = delta.tmax.mean,
+            fill = delta.forest.area.m2.log,
             color = delta.forest.area.m2.log
           ),
           # linewidth = 1,
-          alpha = 0.7
+          alpha = 1
   ) +
-  guides(fill="none") +
   theme_bw() +
-  scale_colour_viridis_c(option = "magma")+
-  labs("delta Forest")
+  scale_colour_viridis_c(option = "magma") +
+  scale_fill_viridis_c(option = "magma") +
+  guides(
+    fill= "none",
+    # guide_legend = "delta Tmax",
+    color = guide_colorbar("delta Forest")
+  ) +
+  theme(legend.position = "bottom")
+
+usa_map_forest
 
 ggsave(usa_map_forest, file = "figures/usa_map_forest.png", width = 8, height = 6, dpi = 300)
 
-usa_map_urban <- ggplot() +
+usa_map_urban <- 
+  # bbs.lc %>%
+  # filter(delta.urban.area.m2.log <= 1.2) %>%
+  ggplot() +
   geom_sf(data = usa_5070,
           fill = "white", color = "grey20", linewidth = 0.3, alpha = 0.8
   ) +
   geom_sf(data = bbs.lc,
           aes(
-            # fill = delta.tmax.mean,
+            fill = delta.urban.area.m2.log,
             color = delta.urban.area.m2.log
           ),
           # linewidth = 1,
-          alpha = 0.7
-  ) +
-  guides(fill="none") +
+          alpha = 1
+  )+
   theme_bw() +
-  scale_colour_viridis_c(option = "magma")+
-  labs("delta Urban")
+  scale_colour_viridis_c(option = "magma",
+                         # limits = c(0,1.2)
+                         ) +
+  scale_fill_viridis_c(option = "magma",
+                       # limits = c(0,1.2)
+                       ) +
+  guides(
+    fill= "none",
+    # guide_legend = "delta Tmax",
+    color = guide_colorbar("delta Urban")
+  ) +
+  theme(legend.position = "bottom")
+
+usa_map_urban
 
 ggsave(usa_map_urban, file = "figures/usa_map_urban.png", width = 8, height = 6, dpi = 300)
 
@@ -427,16 +492,23 @@ usa_map_grass <- ggplot() +
   ) +
   geom_sf(data = bbs.lc,
           aes(
-            # fill = delta.tmax.mean,
+            fill = delta.grass.area.m2.log,
             color = delta.grass.area.m2.log
           ),
           # linewidth = 1,
-          alpha = 0.7
+          alpha = 1
   ) +
-  guides(fill="none") +
   theme_bw() +
-  scale_colour_viridis_c(option = "magma")+
-  labs("delta Grass")
+  scale_colour_viridis_c(option = "magma") +
+  scale_fill_viridis_c(option = "magma") +
+  guides(
+    fill= "none",
+    # guide_legend = "delta Tmax",
+    color = guide_colorbar("delta Grass")
+  ) +
+  theme(legend.position = "bottom")
+
+usa_map_grass
 
 ggsave(usa_map_grass, file = "figures/usa_map_grass.png", width = 8, height = 6, dpi = 300)
 
@@ -446,15 +518,95 @@ usa_map_pasture <- ggplot() +
   ) +
   geom_sf(data = bbs.lc,
           aes(
-            # fill = delta.tmax.mean,
+            fill = delta.pasture.area.m2.log,
             color = delta.pasture.area.m2.log
           ),
           # linewidth = 1,
-          alpha = 0.7
-  ) +
-  guides(fill="none") +
+          alpha = 1
+  )+
   theme_bw() +
-  scale_colour_viridis_c(option = "magma")+
-  labs("delta Pasture")
+  scale_colour_viridis_c(option = "magma") +
+  scale_fill_viridis_c(option = "magma") +
+  guides(
+    fill= "none",
+    # guide_legend = "delta Tmax",
+    color = guide_colorbar("delta Pasture")
+  ) +
+  theme(legend.position = "bottom")
+
+usa_map_pasture
 
 ggsave(usa_map_pasture, file = "figures/usa_map_pasture.png", width = 8, height = 6, dpi = 300)
+
+hist.urban <-
+  bbs.lc %>%
+  ggplot(aes(x=delta.urban.area.m2.log)) +
+  geom_histogram(binwidth = 0.2, fill = "grey80", 
+                 color = "grey30", linewidth = 0.4,
+                 alpha = 0.9
+                 ) +
+  theme_bw()+
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+    xlab("delta log(urban area)")
+
+hist.forest <- bbs.lc %>%
+  ggplot(aes(x=delta.forest.area.m2.log)) +
+  geom_histogram(binwidth = 0.5, fill = "grey80", 
+                 color = "grey30", linewidth = 0.4,
+                 alpha = 0.9
+  ) +
+  theme_bw()+
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  xlab("delta log(forest area)") +
+  ylab("")
+
+hist.grass <- bbs.lc %>%
+  ggplot(aes(x=delta.grass.area.m2.log)) +
+  geom_histogram(binwidth = 0.5, fill = "grey80", 
+                 color = "grey30", linewidth = 0.4,
+                 alpha = 0.9
+  ) +
+  theme_bw()+
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  xlab("delta log(grass area)")
+
+hist.pasture <- bbs.lc %>%
+  ggplot(aes(x=delta.pasture.area.m2.log)) +
+  geom_histogram(binwidth = 0.5, fill = "grey80", 
+                 color = "grey30", linewidth = 0.4,
+                 alpha = 0.9
+  ) +
+  theme_bw()+
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  xlab("delta log(pasture area)") +
+  ylab("")
+
+hists <- hist.urban + hist.forest + hist.grass + hist.pasture
+hists
+
+ggsave(hists, file = "figures/delta.landcover.histograms.png", width = 8, height = 6, dpi = 300)
+
+# hist(bbs.lc$delta.urban.area.m2.log, breaks = 200, xlab = "delta Urban", main = NA) 
+# hist.forest <- hist(bbs.lc$delta.forest.area.m2.log, breaks = 200, xlab = "delta Forest", main = NA)
+# hist.grass <- hist(bbs.lc$delta.grass.area.m2.log, breaks = 200, xlab = "delta Grass", main = NA)
+# hist.pasutre <- hist(bbs.lc$delta.pasture.area.m2.log, breaks = 200, xlab = "delta Pasture", main = NA)
