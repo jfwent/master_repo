@@ -7,6 +7,10 @@
 library(tidyverse)
 library(patchwork)
 library(ggplot2)
+# install.packages("ggsignif")
+library(ggsignif)
+# install.packages("ggpubr")
+library(ggpubr)
 
 # ---- load data ----
 
@@ -68,14 +72,14 @@ all_species_stacked <-
   pivot_longer(!bird, names_to = "var.type", values_to = "r2s") %>%
   group_by(var.type) %>%
   add_row(.data = ttt) %>%
-  ggplot(aes(x = reorder(bird, r2s), y = r2s, fill = var.type)) +
+  ggplot(aes(y = reorder(bird, r2s), x = r2s, fill = var.type)) +
   geom_bar(position = "stack", stat = "identity",
            color = "grey40", alpha = 0.9, linewidth = 0.2,
            width = 0.7) +
   scale_fill_manual(values=c("grey100", "grey70","grey40"),
                     labels = c("Climate", "Full", "Land cover")) +
-  xlab("") +
-  ylab(expression(paste("adj. R"^2))) +
+  ylab("") +
+  xlab(expression(paste("R"^2))) +
   labs(fill = "Model type") +
   theme_bw() +
   theme(
@@ -92,6 +96,7 @@ all_species_stacked
 ggsave("figures/LM_Results/all_species_stacked.png", plot = all_species_stacked,
        width = 8, height = 6, dpi = 300)
 
+rm(ttt)
 
 # adj_r2_lc %>%
 #   dplyr::select(-c(adj.r2, adj.r2_clim, adj.r2_lc)) %>%
@@ -146,7 +151,7 @@ gen.plot <-
   geom_bar(position = "stack", stat = "identity", color = "grey30",
            alpha = 0.8, size = 0.3) +
   xlab("Generation Length") +
-  ylab(expression(paste("adj. R"^2))) +
+  ylab(expression(paste("R"^2))) +
   scale_fill_manual(values=c("grey100", "grey70","grey40"),
                     labels = c("Climate", "Full", "Land cover")) +
   labs(fill = "Model type")  +
@@ -160,7 +165,9 @@ gen.plot <-
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black")) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
-  ylim(-0.02, 0.25)
+  ylim(-0.02, 0.25) #+
+  # geom_signif(comparisons = list("long", "medium"),
+  #             map_signif_level = TRUE)
 
 gen.plot
   
@@ -220,7 +227,7 @@ brain.plot <- adj_r2_lc_traits %>%
   geom_bar(position = "stack", stat = "identity", color = "grey30",
            alpha = 0.8, size = 0.3) +
   xlab("Relative brain size") +
-  ylab(expression(paste("adj. R"^2))) +
+  ylab(expression(paste("R"^2))) +
   scale_fill_manual(values=c("grey100", "grey70","grey40"),
                     labels = c("Climate", "Full", "Land cover")) +
   labs(fill = "Model type")  +
@@ -284,7 +291,7 @@ ggsave(plot = intelligence_plot, filename = "figures/LM_results/intelligence_tra
 
 # ---- ecological traits and variance ----
 
-diet.plot <-adj_r2_lc_traits %>%
+diet.plot <- adj_r2_lc_traits %>%
   drop_na(diet.breadth) %>%
   mutate(diet.breadth.bins = cut(diet.breadth,
                                  breaks = c(0, 1.5, 2, 3),
@@ -300,9 +307,9 @@ diet.plot <-adj_r2_lc_traits %>%
              # group = diet.breadth.bins,
              fill = variable)) +
   geom_bar(position = "stack", stat = "identity", color = "grey30",
-           alpha = 0.8, size = 0.3) +
+           alpha = 0.8, linewidth = 0.3) +
   xlab("Diet breadth") +
-  ylab(expression(paste("adj. R"^2))) +
+  ylab(expression(paste("R"^2))) +
   scale_fill_manual(values=c("grey100", "grey70","grey40"),
                     labels = c("Climate", "Full", "Land cover")) +
   labs(fill = "Model type")  +
@@ -316,7 +323,9 @@ diet.plot <-adj_r2_lc_traits %>%
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black")) +
   ylim(-0.02, 0.25) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") #+
+  # geom_signif(comparisons = list(c("Low", "Medium", "High")),
+  #             map_signif_level = TRUE)
 
 diet.plot
 
@@ -364,6 +373,7 @@ trophic.niche.plot <- adj_r2_lc_traits %>%
             mean.v.joint = mean(v.joint),
             n_obs = n()
   ) %>%
+  filter(n_obs > 5) %>%
   pivot_longer(!c(Trophic.Niche, n_obs), names_to = "variable", values_to = "variance") %>%
   ggplot(aes(x = Trophic.Niche, y = variance,
              # group = Trophic.Niche,
@@ -371,7 +381,7 @@ trophic.niche.plot <- adj_r2_lc_traits %>%
   geom_bar(position = "stack", stat = "identity", color = "grey30",
            alpha = 0.8, size = 0.3) +
   xlab("Trophic Niche") +
-  ylab(expression(paste("adj. R"^2))) +
+  ylab(expression(paste("R"^2))) +
   scale_fill_manual(values=c("grey100", "grey70","grey40"),
                     labels = c("Climate", "Full", "Land cover")) +
   scale_x_discrete(labels = c("Frug.","Gran.", "Invert.", "Omni.", "Scav."),
@@ -399,6 +409,7 @@ trophic.level.plot <- adj_r2_lc_traits %>%
             mean.v.joint = mean(v.joint),
             n_obs = n()
   ) %>%
+  filter(n_obs > 5) %>%
   pivot_longer(!c(Trophic.Level, n_obs), names_to = "variable", values_to = "variance") %>%
   ggplot(aes(x = factor(Trophic.Level), y = variance,
              # group = factor(Trophic.Level),
@@ -425,7 +436,7 @@ trophic.level.plot <- adj_r2_lc_traits %>%
     axis.line = element_line(color = "black")) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")
 
-trophic.level.plot
+trophic.level.plot # marginally significant differences for v.clim
 
 ecological_plot <- diet.plot + habitat.plot
 ecological_plot
@@ -459,7 +470,7 @@ mass.plot <- adj_r2_lc_traits %>%
   geom_bar(position = "stack", stat = "identity", color = "grey30",
            alpha = 0.8, size = 0.3) +
   xlab("Body mass") +
-  ylab(expression(paste("adj. R"^2))) +
+  ylab(expression(paste("R"^2))) +
   scale_fill_manual(values=c("grey100", "grey70","grey40"),
                     labels = c("Climate", "Full", "Land cover")) +
   labs(fill = "Model type")  +
@@ -543,6 +554,8 @@ mig.plot <- adj_r2_lc_traits %>%
     axis.line = element_line(color = "black")) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")
 
+mig.plot
+
 morph_plot <- mass.plot + wing.plot + mig.plot
 morph_plot
 
@@ -586,7 +599,7 @@ acad.plot <- adj_r2_lc_traits %>%
   geom_bar(position = "stack", stat = "identity", color = "grey30",
            alpha = 0.8, size = 0.3) +
   xlab("ACAD population trend") +
-  ylab(expression(paste("adj. R"^2))) +
+  ylab(expression(paste("R"^2))) +
   scale_fill_manual(values=c("grey100", "grey70","grey40"),
                     labels = c("Climate", "Full", "Land cover")) +
   labs(fill = "Model type")  +
@@ -675,12 +688,16 @@ pop_stacked
 ggsave(pop_stacked, filename = "figures/LM_results/pop_trends_adj_r2_stacked.png",
        width = 8, height = 6, dpi = 300)
 
+
+# ---- get significant linear models with traits ----
+load("results/traits_variance_LMs.rda")
+
 # ---- variance plots not stacked with continuous traits ----
 
 p1 <-
   adj_r2_lc_traits %>%
   drop_na(GenLength) %>%
-  pivot_longer(cols = 18:20, values_to = "adj_r2", names_to = "mods") %>%
+  pivot_longer(cols = 20:22, values_to = "adj_r2", names_to = "mods") %>%
   relocate(adj_r2, mods) %>%
   ggplot(aes(y = adj_r2, x = log(GenLength), color = mods, fill = mods)) +
   scale_fill_viridis_d(
@@ -693,7 +710,8 @@ p1 <-
   geom_point(size = 2, alpha = 0.8) +
   geom_smooth(method = "lm",
               alpha = 0.6,
-              aes(fill = mods)
+              aes(fill = mods),
+              se = T
   ) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey40", linewidth = 0.8) +
   xlab("log(Generation length)") +
@@ -707,10 +725,12 @@ p1 <-
     axis.line = element_line(color = "black")
   )
 
+p1
+
 p2 <-
   adj_r2_lc_traits %>%
   drop_na(Clutch.Bird) %>%
-  pivot_longer(cols = 18:20, values_to = "adj_r2", names_to = "mods") %>%
+  pivot_longer(cols = 20:22, values_to = "adj_r2", names_to = "mods") %>%
   relocate(adj_r2, mods) %>%
   ggplot(aes(y = adj_r2, x = Clutch.Bird, color = mods, fill = mods)) +
   scale_fill_viridis_d(
@@ -740,7 +760,7 @@ p2 <-
 p3 <-
   adj_r2_lc_traits %>%
   drop_na(rel_brain_size) %>%
-  pivot_longer(cols = 18:20, values_to = "adj_r2", names_to = "mods") %>%
+  pivot_longer(cols = 20:22, values_to = "adj_r2", names_to = "mods") %>%
   # relocate(adj_r2, mods) %>%
   ggplot(aes(y = adj_r2, x = rel_brain_size, color = mods, fill = mods)) +
   scale_fill_viridis_d(
@@ -806,7 +826,7 @@ ggsave(filename = "figures/LM_Results/life_hist_cont_plot.png", plot = life_hist
 p4 <-
   adj_r2_lc_traits %>%
   drop_na(diet.breadth) %>%
-  pivot_longer(cols = 18:20, values_to = "adj_r2", names_to = "mods") %>%
+  pivot_longer(cols = 20:22, values_to = "adj_r2", names_to = "mods") %>%
   relocate(adj_r2, mods) %>%
   ggplot(aes(y = adj_r2, x = diet.breadth, color = mods, fill = mods)) +
   scale_fill_viridis_d(
@@ -836,7 +856,7 @@ p4 <-
 p5 <-
   adj_r2_lc_traits %>%
   drop_na(hab.breadth) %>%
-  pivot_longer(cols = 18:20, values_to = "adj_r2", names_to = "mods") %>%
+  pivot_longer(cols = 20:22, values_to = "adj_r2", names_to = "mods") %>%
   relocate(adj_r2, mods) %>%
   ggplot(aes(y = adj_r2, x = hab.breadth, color = mods, fill = mods)) +
   scale_fill_viridis_d(
@@ -872,7 +892,7 @@ ggsave(filename = "figures/LM_Results/eco_traits_cont_plot.png", plot = ecol_tra
 p6 <-
   adj_r2_lc_traits %>%
   drop_na(body.mass) %>%
-  pivot_longer(cols = 18:20, values_to = "adj_r2", names_to = "mods") %>%
+  pivot_longer(cols = 20:22, values_to = "adj_r2", names_to = "mods") %>%
   relocate(adj_r2, mods) %>%
   ggplot(aes(y = adj_r2, x = log(body.mass), color = mods, fill = mods)) +
   scale_fill_viridis_d(
@@ -902,7 +922,7 @@ p6 <-
 p7 <-
   adj_r2_lc_traits %>%
   drop_na(hand.wing.ind) %>%
-  pivot_longer(cols = 18:20, values_to = "adj_r2", names_to = "mods") %>%
+  pivot_longer(cols = 20:22, values_to = "adj_r2", names_to = "mods") %>%
   relocate(adj_r2, mods) %>%
   ggplot(aes(y = adj_r2, x = hand.wing.ind, color = mods, fill = mods)) +
   scale_fill_viridis_d(
@@ -984,23 +1004,16 @@ p2 <- coefs_tib %>%
   ggplot(aes(y = `delta.tmax.mean`, x = log(GenLength))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  xlab("log(Generation length)")
-
-p1 <- coefs_tib %>%
-  drop_na(tmax.mean) %>%
-  ggplot(aes(y = `tmax.mean`, x = log(GenLength))) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm") +
-  xlab("log(Generation length)")
-
-p3 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(tmin.mean) %>%
-  ggplot(aes(y = `tmin.mean`, x = log(GenLength))) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm") +
-  xlab("log(Generation length)")
+  xlab("log(Generation length)") +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")  +
+  ylab("delta Tmax")
 
 p4 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1009,7 +1022,16 @@ p4 <- coefs_tib %>%
   ggplot(aes(y = `delta.tmin.mean`, x = log(GenLength))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  xlab("log(Generation length)")
+  xlab("log(Generation length)") +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Tmin")
 
 p6 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1018,25 +1040,16 @@ p6 <- coefs_tib %>%
   ggplot(aes(y = `delta.swb.mean`, x = log(GenLength))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  xlab("log(Generation length)")
-
-p5 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(swb.mean) %>%
-  ggplot(aes(y = `swb.mean`, x = log(GenLength))) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm") +
-  xlab("log(Generation length)")
-
-p7 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(cmi.diff.mean) %>%
-  ggplot(aes(y = `cmi.diff.mean`, x = log(GenLength))) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm") +
-  xlab("log(Generation length)")
+  xlab("log(Generation length)") +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta SWB")
 
 p8 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1045,16 +1058,19 @@ p8 <- coefs_tib %>%
   ggplot(aes(y = `delta.cmi.diff.mean`, x = log(GenLength))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  xlab("log(Generation length)")
+  xlab("log(Generation length)") +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta CMI diff.")
 
-p9 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(urban.area.m2.log) %>%
-  ggplot(aes(y = `urban.area.m2.log`, x = log(GenLength))) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm") +
-  xlab("log(Generation length)")
+coef_plot_gen_length_climate <- p2 + p4 + p6 + p8
+coef_plot_gen_length_climate
 
 p10 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1063,16 +1079,15 @@ p10 <- coefs_tib %>%
   ggplot(aes(y = `delta.urban.area.m2.log`, x = log(GenLength))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  xlab("log(Generation length)")
-
-p11 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(pasture.area.m2.log) %>%
-  ggplot(aes(y = `pasture.area.m2.log`, x = log(GenLength))) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm") +
-  xlab("log(Generation length)")
+  xlab("log(Generation length)") +theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Urban")
 
 p12 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1081,7 +1096,15 @@ p12 <- coefs_tib %>%
   ggplot(aes(y = `delta.pasture.area.m2.log`, x = log(GenLength))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  xlab("log(Generation length)")
+  xlab("log(Generation length)")+theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Pasture")
 
 p14 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1090,25 +1113,16 @@ p14 <- coefs_tib %>%
   ggplot(aes(y = `delta.forest.area.m2.log`, x = log(GenLength))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  xlab("log(Generation length)")
-
-p13 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(forest.area.m2.log) %>%
-  ggplot(aes(y = `forest.area.m2.log`, x = log(GenLength))) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm") +
-  xlab("log(Generation length)")
-
-p15 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(grass.area.m2.log) %>%
-  ggplot(aes(y = `grass.area.m2.log`, x = log(GenLength))) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm") +
-  xlab("log(Generation length)")
+  xlab("log(Generation length)") +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Forest")
 
 p16 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1117,49 +1131,18 @@ p16 <- coefs_tib %>%
   ggplot(aes(y = `delta.grass.area.m2.log`, x = log(GenLength))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  xlab("log(Generation length)")
+  xlab("log(Generation length)")+theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Grass")
 
-# p11 <- coefs_tib %>%
-#   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-#   # left_join(species.traits, by = "bird") %>%
-#   drop_na(crop.area.m2.log) %>%
-#   ggplot(aes(y = `crop.area.m2.log`, x = log(GenLength))) +
-#   geom_point(size = 2, alpha = 0.5) +
-#   geom_smooth(method = "lm") +
-#   xlab("log(Generation length)")
-# 
-# p12 <- coefs_tib %>%
-#   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-#   # left_join(species.traits, by = "bird") %>%
-#   drop_na(delta.crop.area.m2.log) %>%
-#   ggplot(aes(y = `delta.crop.area.m2.log`, x = log(GenLength))) +
-#   geom_point(size = 2, alpha = 0.5) +
-#   geom_smooth(method = "lm") +
-#   xlab("log(Generation length)")
-
-# p15 <- coefs_tib %>%
-#   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-#   # left_join(species.traits, by = "bird") %>%
-#   drop_na(all.grass.area.m2.log) %>%
-#   ggplot(aes(y = `all.grass.area.m2.log`, x = log(GenLength))) +
-#   geom_point(size = 2, alpha = 0.5) +
-#   geom_smooth(method = "lm") +
-#   xlab("log(Generation length)")
-# 
-# p16 <- coefs_tib %>%
-#   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-#   # left_join(species.traits, by = "bird") %>%
-#   drop_na(delta.all.grass.area.m2.log) %>%
-#   ggplot(aes(y = `delta.all.grass.area.m2.log`, x = log(GenLength))) +
-#   geom_point(size = 2, alpha = 0.5) +
-#   geom_smooth(method = "lm") +
-#   xlab("log(Generation length)")
-
-coef_plot_gen_length <- p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + 
-  p10 +
-  p11 + p12 + p13 + p14 + p15 + p16
-
-coef_plot_gen_length
+coef_plot_gen_length_landcover <- p10 + p12 + p14 + p16
+coef_plot_gen_length_landcover
 
 # ---- beta coefs vs diet breadth plots ----
 
@@ -1168,16 +1151,16 @@ p2 <- coefs_tib %>%
   ggplot(aes(y = `delta.tmax.mean`, x = diet.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  xlab("Diet breadth")
-
-p1 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(tmax.mean) %>%
-  ggplot(aes(y = `tmax.mean`, x = diet.breadth)) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm") +
-  xlab("Diet breadth")
+  xlab("Diet breadth") +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Tmax")
 
 p4 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1185,17 +1168,17 @@ p4 <- coefs_tib %>%
   drop_na(delta.tmin.mean) %>%
   ggplot(aes(y = `delta.tmin.mean`, x = diet.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm") +
-  xlab("Diet breadth")
-
-p3 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(tmin.mean) %>%
-  ggplot(aes(y = `tmin.mean`, x = diet.breadth)) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm") +
-  xlab("Diet breadth")
+  geom_smooth(method = "lm", linetype = "dashed") +
+  xlab("Diet breadth") +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Tmin")
 
 p6 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1204,25 +1187,16 @@ p6 <- coefs_tib %>%
   ggplot(aes(y = `delta.swb.mean`, x = diet.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  xlab("Diet breadth")
-
-p5 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(swb.mean) %>%
-  ggplot(aes(y = `swb.mean`, x = diet.breadth)) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm") +
-  xlab("Diet breadth")
-
-p7 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(cmi.diff.mean) %>%
-  ggplot(aes(y = `cmi.diff.mean`, x = diet.breadth)) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm") +
-  xlab("Diet breadth")
+  xlab("Diet breadth") +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta SWB")
 
 p8 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1231,16 +1205,19 @@ p8 <- coefs_tib %>%
   ggplot(aes(y = `delta.cmi.diff.mean`, x = diet.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  xlab("Diet breadth")
+  xlab("Diet breadth") +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta CMI diff.")
 
-p9 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(urban.area.m2.log) %>%
-  ggplot(aes(y = `urban.area.m2.log`, x = diet.breadth)) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm") +
-  xlab("Diet breadth")
+coef_plot_diet_climate <- p2 + p4 + p6 + p8
+coef_plot_diet_climate
 
 p10 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1249,16 +1226,16 @@ p10 <- coefs_tib %>%
   ggplot(aes(y = `delta.urban.area.m2.log`, x = diet.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  xlab("Diet breadth")
-
-p11 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(pasture.area.m2.log) %>%
-  ggplot(aes(y = `pasture.area.m2.log`, x = diet.breadth)) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm") +
-  xlab("Diet breadth")
+  xlab("Diet breadth") +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Urban")
 
 p12 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1267,7 +1244,16 @@ p12 <- coefs_tib %>%
   ggplot(aes(y = `delta.pasture.area.m2.log`, x = diet.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  xlab("Diet breadth")
+  xlab("Diet breadth") +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Pasture")
 
 p14 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1276,25 +1262,16 @@ p14 <- coefs_tib %>%
   ggplot(aes(y = `delta.forest.area.m2.log`, x = diet.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  xlab("Diet breadth")
-
-p13 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(forest.area.m2.log) %>%
-  ggplot(aes(y = `forest.area.m2.log`, x = diet.breadth)) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm") +
-  xlab("Diet breadth")
-
-p15 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(grass.area.m2.log) %>%
-  ggplot(aes(y = `grass.area.m2.log`, x = diet.breadth)) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm") +
-  xlab("Diet breadth")
+  xlab("Diet breadth") +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Forest")
 
 p16 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1303,11 +1280,19 @@ p16 <- coefs_tib %>%
   ggplot(aes(y = `delta.grass.area.m2.log`, x = diet.breadth)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  xlab("Diet breadth")
+  xlab("Diet breadth") +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Grassland")
 
-coef_plot_diet <- p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + p11 + p12 + p13 + p14 + p15 + p16 
-
-coef_plot_diet
+coef_plot_diet_landcover <- p10 + p12 + p14 + p16 
+coef_plot_diet_landcover
 
 # ---- beta coefs vs migrant plots ----
 
@@ -1320,18 +1305,16 @@ p2 <- coefs_tib %>%
   geom_boxplot() +
   xlab("Migrant") +
   geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
-
-p1 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(tmax.mean) %>%
-  drop_na(Migrant) %>%
-  ggplot(aes(y = `tmax.mean`, x = Migrant)) +
-  geom_boxplot() +
-  xlab("Migrant")  +
-  geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
+            stat = "count", vjust= -0.2, y = 0) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")  +
+  ylab("delta Tmax")
 
 p4 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1342,18 +1325,16 @@ p4 <- coefs_tib %>%
   geom_boxplot() +
   xlab("Migrant")  +
   geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
-
-p3 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(tmin.mean) %>%
-  drop_na(Migrant) %>%
-  ggplot(aes(y = `tmin.mean`, x = Migrant)) +
-  geom_boxplot() +
-  xlab("Migrant") +
-  geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
+            stat = "count", vjust= -0.2, y = 0)  +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Tmin")
 
 p6 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1364,29 +1345,16 @@ p6 <- coefs_tib %>%
   geom_boxplot() +
   xlab("Migrant") +
   geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
-
-p5 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(swb.mean) %>%
-  drop_na(Migrant) %>%
-  ggplot(aes(y = `swb.mean`, x = Migrant)) +
-  geom_boxplot() +
-  xlab("Migrant") +
-  geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
-
-p7 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(cmi.diff.mean) %>%
-  drop_na(Migrant) %>%
-  ggplot(aes(y = `cmi.diff.mean`, x = Migrant)) +
-  geom_boxplot()+
-  xlab("Migrant") +
-  geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
+            stat = "count", vjust= -0.2, y = 0) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta SWB")
 
 p8 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1397,18 +1365,19 @@ p8 <- coefs_tib %>%
   geom_boxplot()+
   xlab("Migrant") +
   geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
+            stat = "count", vjust= -0.2, y = 0) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta CMI diff.")
 
-p9 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(urban.area.m2.log) %>%
-  drop_na(Migrant) %>%
-  ggplot(aes(y = `urban.area.m2.log`, x = Migrant)) +
-  geom_boxplot()+
-  xlab("Migrant") +
-  geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
+coef_plot_migrant_climate <- p2 + p4 + p6 + p8
+coef_plot_migrant_climate
 
 p10 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1419,18 +1388,16 @@ p10 <- coefs_tib %>%
   geom_boxplot()+
   xlab("Migrant") +
   geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
-
-p11 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(pasture.area.m2.log) %>%
-  drop_na(Migrant) %>%
-  ggplot(aes(y = `pasture.area.m2.log`, x = Migrant))  +
-  geom_boxplot()+
-  xlab("Migrant") +
-  geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
+            stat = "count", vjust= -0.2, y = 0)  +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Urban")
 
 p12 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1441,7 +1408,17 @@ p12 <- coefs_tib %>%
   geom_boxplot()+
   xlab("Migrant") +
   geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
+            stat = "count", vjust= -0.2, y = 0) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  # stat_compare_means() +
+  ylab("delta Pasture")
 
 p14 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1452,29 +1429,16 @@ p14 <- coefs_tib %>%
   geom_boxplot()+
   xlab("Migrant") +
   geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
-
-p13 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(forest.area.m2.log) %>%
-  drop_na(Migrant) %>%
-  ggplot(aes(y = `forest.area.m2.log`, x = Migrant))  +
-  geom_boxplot()+
-  xlab("Migrant") +
-  geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
-
-p15 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(grass.area.m2.log) %>%
-  drop_na(Migrant) %>%
-  ggplot(aes(y = `grass.area.m2.log`, x = Migrant)) +
-  geom_boxplot()+
-  xlab("Migrant") +
-  geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
+            stat = "count", vjust= -0.2, y = 0) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Forest")
 
 p16 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1485,11 +1449,19 @@ p16 <- coefs_tib %>%
   geom_boxplot()+
   xlab("Migrant") +
   geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
+            stat = "count", vjust= -0.2, y = 0) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Grassland")
 
-coef_plot_migrant <- p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + p11 + p12 + p13 + p14 + p15 + p16 
-
-coef_plot_migrant
+coef_plot_migrant_landcover <- p10 + p12 + p14 + p16
+coef_plot_migrant_landcover
 
 # ---- beta coefs vs innovativeness plots ----
 
@@ -1498,29 +1470,23 @@ p2 <- coefs_tib %>%
   # left_join(species.traits, by = "bird") %>%
   drop_na(tot.innov) %>%
   mutate(tot.innov.bins = cut(tot.innov,
-                              breaks = c(-1, 0, 3, 45),
-                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
+                              breaks = c(-1, 0, 45),
+                              labels = c("No", "Yes"))) %>%
   drop_na(delta.tmax.mean) %>%
   ggplot(aes(y = `delta.tmax.mean`, x = tot.innov.bins, group = tot.innov.bins)) +
   geom_boxplot() +
   xlab("Innovativeness") +
   geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
-# p2
-
-p1 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(tmax.mean) %>%
-  drop_na(tot.innov) %>%
-  mutate(tot.innov.bins = cut(tot.innov,
-                              breaks = c(-1, 0, 3, 45),
-                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
-  ggplot(aes(y = `tmax.mean`, x = tot.innov.bins, group = tot.innov.bins)) +
-  geom_boxplot() +
-  xlab("Innovativeness")  +
-  geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
+            stat = "count", vjust= -0.2, y = 0)  +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Tmax")
 
 p4 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1529,28 +1495,22 @@ p4 <- coefs_tib %>%
   drop_na(Migrant) %>%
   drop_na(tot.innov) %>%
   mutate(tot.innov.bins = cut(tot.innov,
-                              breaks = c(-1, 0, 3, 45),
-                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
+                              breaks = c(-1, 0, 45),
+                              labels = c("No", "Yes"))) %>%
   ggplot(aes(y = `delta.tmin.mean`, x = tot.innov.bins, group = tot.innov.bins)) +
   geom_boxplot() +
   xlab("Innovativeness")  +
   geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
-
-p3 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(tmin.mean) %>%
-  drop_na(Migrant) %>%
-  drop_na(tot.innov) %>%
-  mutate(tot.innov.bins = cut(tot.innov,
-                              breaks = c(-1, 0, 3, 45),
-                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
-  ggplot(aes(y = `tmin.mean`, x = tot.innov.bins, group = tot.innov.bins)) +
-  geom_boxplot() +
-  xlab("Innovativeness") +
-  geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
+            stat = "count", vjust= -0.2, y = 0) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")  +
+  ylab("delta Tmin")
 
 p6 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1558,41 +1518,22 @@ p6 <- coefs_tib %>%
   drop_na(delta.swb.mean) %>%
   drop_na(tot.innov) %>%
   mutate(tot.innov.bins = cut(tot.innov,
-                              breaks = c(-1, 0, 3, 45),
-                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
+                              breaks = c(-1, 0, 45),
+                              labels = c("No", "Yes"))) %>%
   ggplot(aes(y = `delta.swb.mean`, x = tot.innov.bins, group = tot.innov.bins)) +
   geom_boxplot() +
   xlab("Innovativeness") +
   geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
-
-p5 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(swb.mean) %>%
-  drop_na(tot.innov) %>%
-  mutate(tot.innov.bins = cut(tot.innov,
-                              breaks = c(-1, 0, 3, 45),
-                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
-  ggplot(aes(y = `swb.mean`, x = tot.innov.bins)) +
-  geom_boxplot() +
-  xlab("Innovativeness") +
-  geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
-
-p7 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(cmi.diff.mean) %>%
-  drop_na(tot.innov) %>%
-  mutate(tot.innov.bins = cut(tot.innov,
-                              breaks = c(-1, 0, 3, 45),
-                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
-  ggplot(aes(y = `cmi.diff.mean`, x = tot.innov.bins)) +
-  geom_boxplot()+
-  xlab("Innovativeness") +
-  geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
+            stat = "count", vjust= -0.2, y = 0) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta SWB")
 
 p8 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1600,27 +1541,26 @@ p8 <- coefs_tib %>%
   drop_na(delta.cmi.diff.mean) %>%
   drop_na(tot.innov) %>%
   mutate(tot.innov.bins = cut(tot.innov,
-                              breaks = c(-1, 0, 3, 45),
-                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
+                              breaks = c(-1, 0, 45),
+                              labels = c("No", "Yes"))) %>%
   ggplot(aes(y = `delta.cmi.diff.mean`, x = tot.innov.bins))  +
   geom_boxplot()+
   xlab("Innovativeness") +
   geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
+            stat = "count", vjust= -0.2, y = 0) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  # ylab("delta CMI diff.") +
+  stat_compare_means()
 
-p9 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(urban.area.m2.log) %>%
-  drop_na(tot.innov) %>%
-  mutate(tot.innov.bins = cut(tot.innov,
-                              breaks = c(-1, 0, 3, 45),
-                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
-  ggplot(aes(y = `urban.area.m2.log`, x = tot.innov.bins)) +
-  geom_boxplot()+
-  xlab("Innovativeness") +
-  geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
+coef_plot_innov_climate <- p2 + p4 + p6 + p8
+coef_plot_innov_climate
 
 p10 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1628,27 +1568,23 @@ p10 <- coefs_tib %>%
   drop_na(delta.urban.area.m2.log) %>%
   drop_na(tot.innov) %>%
   mutate(tot.innov.bins = cut(tot.innov,
-                              breaks = c(-1, 0, 3, 45),
-                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
+                              breaks = c(-1, 0, 45),
+                              labels = c("No", "Yes"))) %>%
   ggplot(aes(y = `delta.urban.area.m2.log`, x = tot.innov.bins)) +
   geom_boxplot()+
   xlab("Innovativeness") +
   geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
-
-p11 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(pasture.area.m2.log) %>%
-  drop_na(tot.innov) %>%
-  mutate(tot.innov.bins = cut(tot.innov,
-                              breaks = c(-1, 0, 3, 45),
-                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
-  ggplot(aes(y = `pasture.area.m2.log`, x = tot.innov.bins))  +
-  geom_boxplot()+
-  xlab("Innovativeness") +
-  geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
+            stat = "count", vjust= -0.2, y = 0) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Urban") +
+  stat_compare_means()
 
 p12 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1656,13 +1592,23 @@ p12 <- coefs_tib %>%
   drop_na(delta.pasture.area.m2.log) %>%
   drop_na(tot.innov) %>%
   mutate(tot.innov.bins = cut(tot.innov,
-                              breaks = c(-1, 0, 3, 45),
-                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
+                              breaks = c(-1, 0, 45),
+                              labels = c("No", "Yes"))) %>%
   ggplot(aes(y = `delta.pasture.area.m2.log`, x = tot.innov.bins))  +
   geom_boxplot()+
   xlab("Innovativeness") +
   geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
+            stat = "count", vjust= -0.2, y = 0) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Pasture") +
+  stat_compare_means()
 
 p14 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1670,41 +1616,22 @@ p14 <- coefs_tib %>%
   drop_na(delta.forest.area.m2.log) %>%
   drop_na(tot.innov) %>%
   mutate(tot.innov.bins = cut(tot.innov,
-                              breaks = c(-1, 0, 3, 45),
-                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
+                              breaks = c(-1, 0, 45),
+                              labels = c("No", "Yes"))) %>%
   ggplot(aes(y = `delta.forest.area.m2.log`, x = tot.innov.bins)) +
   geom_boxplot()+
   xlab("Innovativeness") +
   geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
-
-p13 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(forest.area.m2.log) %>%
-  drop_na(tot.innov) %>%
-  mutate(tot.innov.bins = cut(tot.innov,
-                              breaks = c(-1, 0, 3, 45),
-                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
-  ggplot(aes(y = `forest.area.m2.log`, x = tot.innov.bins))  +
-  geom_boxplot()+
-  xlab("Innovativeness") +
-  geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
-
-p15 <- coefs_tib %>%
-  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
-  # left_join(species.traits, by = "bird") %>%
-  drop_na(grass.area.m2.log) %>%
-  drop_na(tot.innov) %>%
-  mutate(tot.innov.bins = cut(tot.innov,
-                              breaks = c(-1, 0, 3, 45),
-                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
-  ggplot(aes(y = `grass.area.m2.log`, x = tot.innov.bins)) +
-  geom_boxplot()+
-  xlab("Innovativeness") +
-  geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
+            stat = "count", vjust= -0.2, y = 0) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Forest")
 
 p16 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1712,18 +1639,28 @@ p16 <- coefs_tib %>%
   drop_na(delta.grass.area.m2.log) %>%
   drop_na(tot.innov) %>%
   mutate(tot.innov.bins = cut(tot.innov,
-                              breaks = c(-1, 0, 3, 45),
-                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
+                              breaks = c(-1, 0, 45),
+                              labels = c("No", "Yes"))) %>%
   ggplot(aes(y = `delta.grass.area.m2.log`, x = tot.innov.bins)) +
   geom_boxplot()+
   xlab("Innovativeness") +
   geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 0)
+            stat = "count", vjust= -0.2, y = 0) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Grassland")
 
-coef_plot_innov <- p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + p11 + p12 + p13 + p14 + p15 + p16 
+coef_plot_innov_landcover <- p10 + p12 + p14 + p16
+coef_plot_innov_landcover
 
-coef_plot_innov
-
+# coef_plot_innov <- p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + p11 + p12 + p13 + p14 + p15 + p16 
+# coef_plot_innov
 
 # ---- beta coefs vs initial abundance plots ----
 
@@ -1874,20 +1811,143 @@ coef_plot_abund <- p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + p11 + p12 
 coef_plot_abund
 
 # ---- save beta coef plots ----
-ggsave(filename = "figures/LM_Results/beta_coef_diet.png", plot = coef_plot_diet,
+ggsave(filename = "figures/LM_Results/beta_coef_diet_climate.png", plot = coef_plot_diet_climate,
        width = 8, height = 6, dpi = 300)
-ggsave(filename = "figures/LM_Results/beta_coef_gen_length.png", plot = coef_plot_gen_length,
+ggsave(filename = "figures/LM_Results/beta_coef_diet_landcover.png", plot = coef_plot_diet_landcover,
        width = 8, height = 6, dpi = 300)
-ggsave(filename = "figures/LM_Results/beta_coef_innovations.png", plot = coef_plot_innov,
+ggsave(filename = "figures/LM_Results/beta_coef_gen_length_climate.png", plot = coef_plot_gen_length_climate,
        width = 8, height = 6, dpi = 300)
-ggsave(filename = "figures/LM_Results/beta_coef_migrant.png", plot = coef_plot_migrant,
+ggsave(filename = "figures/LM_Results/beta_coef_gen_length_landcover.png", plot = coef_plot_gen_length_landcover,
+       width = 8, height = 6, dpi = 300)
+ggsave(filename = "figures/LM_Results/beta_coef_innovations_climate.png", plot = coef_plot_innov_climate,
+       width = 8, height = 6, dpi = 300)
+ggsave(filename = "figures/LM_Results/beta_coef_innovations_landcover.png", plot = coef_plot_innov_landcover,
+       width = 8, height = 6, dpi = 300)
+ggsave(filename = "figures/LM_Results/beta_coef_migrant_climate.png", plot = coef_plot_migrant_climate,
+       width = 8, height = 6, dpi = 300)
+ggsave(filename = "figures/LM_Results/beta_coef_migrant_landcover.png", plot = coef_plot_migrant_landcover,
        width = 8, height = 6, dpi = 300)
 ggsave(filename = "figures/LM_Results/beta_coef_abund.png", plot = coef_plot_abund,
        width = 8, height = 6, dpi = 300)
 
 # ===== Old ----
 # ---- beta coefs vs gen length plots ----
+# coef_plot_gen_length <- p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + 
+#   p10 +
+#   p11 + p12 + p13 + p14 + p15 + p16
 
+# p11 <- coefs_tib %>%
+#   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+#   # left_join(species.traits, by = "bird") %>%
+#   drop_na(crop.area.m2.log) %>%
+#   ggplot(aes(y = `crop.area.m2.log`, x = log(GenLength))) +
+#   geom_point(size = 2, alpha = 0.5) +
+#   geom_smooth(method = "lm") +
+#   xlab("log(Generation length)")
+# 
+# p12 <- coefs_tib %>%
+#   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+#   # left_join(species.traits, by = "bird") %>%
+#   drop_na(delta.crop.area.m2.log) %>%
+#   ggplot(aes(y = `delta.crop.area.m2.log`, x = log(GenLength))) +
+#   geom_point(size = 2, alpha = 0.5) +
+#   geom_smooth(method = "lm") +
+#   xlab("log(Generation length)")
+
+# p15 <- coefs_tib %>%
+#   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+#   # left_join(species.traits, by = "bird") %>%
+#   drop_na(all.grass.area.m2.log) %>%
+#   ggplot(aes(y = `all.grass.area.m2.log`, x = log(GenLength))) +
+#   geom_point(size = 2, alpha = 0.5) +
+#   geom_smooth(method = "lm") +
+#   xlab("log(Generation length)")
+# 
+# p16 <- coefs_tib %>%
+#   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+#   # left_join(species.traits, by = "bird") %>%
+#   drop_na(delta.all.grass.area.m2.log) %>%
+#   ggplot(aes(y = `delta.all.grass.area.m2.log`, x = log(GenLength))) +
+#   geom_point(size = 2, alpha = 0.5) +
+#   geom_smooth(method = "lm") +
+#   xlab("log(Generation length)")
+
+# p1 <- coefs_tib %>%
+#   drop_na(tmax.mean) %>%
+#   ggplot(aes(y = `tmax.mean`, x = log(GenLength))) +
+#   geom_point(size = 2, alpha = 0.5) +
+#   geom_smooth(method = "lm") +
+#   xlab("log(Generation length)")
+# 
+# p3 <- coefs_tib %>%
+#   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+#   # left_join(species.traits, by = "bird") %>%
+#   drop_na(tmin.mean) %>%
+#   ggplot(aes(y = `tmin.mean`, x = log(GenLength))) +
+#   geom_point(size = 2, alpha = 0.5) +
+#   geom_smooth(method = "lm") +
+#   xlab("log(Generation length)") +
+#   theme_bw() +
+#   theme(
+#     panel.border = element_blank(),
+#     # legend.position = "none",
+#     panel.grid.major = element_blank(),
+#     panel.grid.minor = element_blank(),
+#     axis.line = element_line(color = "black")) +
+#   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")
+
+# p5 <- coefs_tib %>%
+#   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+#   # left_join(species.traits, by = "bird") %>%
+#   drop_na(swb.mean) %>%
+#   ggplot(aes(y = `swb.mean`, x = log(GenLength))) +
+#   geom_point(size = 2, alpha = 0.5) +
+#   geom_smooth(method = "lm") +
+#   xlab("log(Generation length)")
+# 
+# p7 <- coefs_tib %>%
+#   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+#   # left_join(species.traits, by = "bird") %>%
+#   drop_na(cmi.diff.mean) %>%
+#   ggplot(aes(y = `cmi.diff.mean`, x = log(GenLength))) +
+#   geom_point(size = 2, alpha = 0.5) +
+#   geom_smooth(method = "lm") +
+#   xlab("log(Generation length)")
+# 
+# p9 <- coefs_tib %>%
+#   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+#   # left_join(species.traits, by = "bird") %>%
+#   drop_na(urban.area.m2.log) %>%
+#   ggplot(aes(y = `urban.area.m2.log`, x = log(GenLength))) +
+#   geom_point(size = 2, alpha = 0.5) +
+#   geom_smooth(method = "lm") +
+#   xlab("log(Generation length)")
+# p13 <- coefs_tib %>%
+#   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+#   # left_join(species.traits, by = "bird") %>%
+#   drop_na(forest.area.m2.log) %>%
+#   ggplot(aes(y = `forest.area.m2.log`, x = log(GenLength))) +
+#   geom_point(size = 2, alpha = 0.5) +
+#   geom_smooth(method = "lm") +
+#   xlab("log(Generation length)")
+# 
+# p15 <- coefs_tib %>%
+#   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+#   # left_join(species.traits, by = "bird") %>%
+#   drop_na(grass.area.m2.log) %>%
+#   ggplot(aes(y = `grass.area.m2.log`, x = log(GenLength))) +
+#   geom_point(size = 2, alpha = 0.5) +
+#   geom_smooth(method = "lm") +
+#   xlab("log(Generation length)")
+
+# p11 <- coefs_tib %>%
+#   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+#   # left_join(species.traits, by = "bird") %>%
+#   drop_na(pasture.area.m2.log) %>%
+#   ggplot(aes(y = `pasture.area.m2.log`, x = log(GenLength))) +
+#   geom_point(size = 2, alpha = 0.5) +
+#   geom_smooth(method = "lm") +
+#   xlab("log(Generation length)")
 p2 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
   # left_join(species.traits, by = "bird") %>%
@@ -2076,6 +2136,79 @@ coef_plot_gen_length
 
 # ---- beta coefs vs diet breadth plots ----
 
+p1 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(tmax.mean) %>%
+  ggplot(aes(y = `tmax.mean`, x = diet.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Diet breadth")
+
+p3 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(tmin.mean) %>%
+  ggplot(aes(y = `tmin.mean`, x = diet.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Diet breadth")
+
+p5 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(swb.mean) %>%
+  ggplot(aes(y = `swb.mean`, x = diet.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Diet breadth")
+
+p7 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(cmi.diff.mean) %>%
+  ggplot(aes(y = `cmi.diff.mean`, x = diet.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Diet breadth")
+
+p9 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(urban.area.m2.log) %>%
+  ggplot(aes(y = `urban.area.m2.log`, x = diet.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Diet breadth")
+
+p11 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(pasture.area.m2.log) %>%
+  ggplot(aes(y = `pasture.area.m2.log`, x = diet.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Diet breadth")
+
+p13 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(forest.area.m2.log) %>%
+  ggplot(aes(y = `forest.area.m2.log`, x = diet.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Diet breadth")
+
+p15 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(grass.area.m2.log) %>%
+  ggplot(aes(y = `grass.area.m2.log`, x = diet.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Diet breadth")
+
+
 p2 <- coefs_tib %>%
   pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
   left_join(species.traits, by = "bird") %>%
@@ -2225,6 +2358,94 @@ coef_plot_diet <- p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + p11 + p12 +
 coef_plot_diet
 
 # ---- beta coefs vs migrant plots ----
+
+p1 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(tmax.mean) %>%
+  drop_na(Migrant) %>%
+  ggplot(aes(y = `tmax.mean`, x = Migrant)) +
+  geom_boxplot() +
+  xlab("Migrant")  +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= -0.2, y = 0)
+
+p3 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(tmin.mean) %>%
+  drop_na(Migrant) %>%
+  ggplot(aes(y = `tmin.mean`, x = Migrant)) +
+  geom_boxplot() +
+  xlab("Migrant") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= -0.2, y = 0)
+
+p5 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(swb.mean) %>%
+  drop_na(Migrant) %>%
+  ggplot(aes(y = `swb.mean`, x = Migrant)) +
+  geom_boxplot() +
+  xlab("Migrant") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= -0.2, y = 0)
+
+p7 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(cmi.diff.mean) %>%
+  drop_na(Migrant) %>%
+  ggplot(aes(y = `cmi.diff.mean`, x = Migrant)) +
+  geom_boxplot()+
+  xlab("Migrant") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= -0.2, y = 0)
+
+p9 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(urban.area.m2.log) %>%
+  drop_na(Migrant) %>%
+  ggplot(aes(y = `urban.area.m2.log`, x = Migrant)) +
+  geom_boxplot()+
+  xlab("Migrant") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= -0.2, y = 0)
+
+p11 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(pasture.area.m2.log) %>%
+  drop_na(Migrant) %>%
+  ggplot(aes(y = `pasture.area.m2.log`, x = Migrant))  +
+  geom_boxplot()+
+  xlab("Migrant") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= -0.2, y = 0)
+
+p13 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(forest.area.m2.log) %>%
+  drop_na(Migrant) %>%
+  ggplot(aes(y = `forest.area.m2.log`, x = Migrant))  +
+  geom_boxplot()+
+  xlab("Migrant") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= -0.2, y = 0)
+
+p15 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(grass.area.m2.log) %>%
+  drop_na(Migrant) %>%
+  ggplot(aes(y = `grass.area.m2.log`, x = Migrant)) +
+  geom_boxplot()+
+  xlab("Migrant") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= -0.2, y = 0)
 
 p2 <- coefs_tib %>%
   pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -2557,6 +2778,119 @@ coef_plot_hab <- p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + p11 + p12 + 
 coef_plot_hab
 
 # ---- beta coefs vs innovativeness plots ----
+
+p1 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(tmax.mean) %>%
+  drop_na(tot.innov) %>%
+  mutate(tot.innov.bins = cut(tot.innov,
+                              breaks = c(-1, 0, 3, 45),
+                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
+  ggplot(aes(y = `tmax.mean`, x = tot.innov.bins, group = tot.innov.bins)) +
+  geom_boxplot() +
+  xlab("Innovativeness")  +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= -0.2, y = 0)
+
+p3 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(tmin.mean) %>%
+  drop_na(Migrant) %>%
+  drop_na(tot.innov) %>%
+  mutate(tot.innov.bins = cut(tot.innov,
+                              breaks = c(-1, 0, 3, 45),
+                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
+  ggplot(aes(y = `tmin.mean`, x = tot.innov.bins, group = tot.innov.bins)) +
+  geom_boxplot() +
+  xlab("Innovativeness") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= -0.2, y = 0)
+
+p5 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(swb.mean) %>%
+  drop_na(tot.innov) %>%
+  mutate(tot.innov.bins = cut(tot.innov,
+                              breaks = c(-1, 0, 3, 45),
+                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
+  ggplot(aes(y = `swb.mean`, x = tot.innov.bins)) +
+  geom_boxplot() +
+  xlab("Innovativeness") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= -0.2, y = 0)
+
+p7 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(cmi.diff.mean) %>%
+  drop_na(tot.innov) %>%
+  mutate(tot.innov.bins = cut(tot.innov,
+                              breaks = c(-1, 0, 3, 45),
+                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
+  ggplot(aes(y = `cmi.diff.mean`, x = tot.innov.bins)) +
+  geom_boxplot()+
+  xlab("Innovativeness") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= -0.2, y = 0)
+
+p9 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(urban.area.m2.log) %>%
+  drop_na(tot.innov) %>%
+  mutate(tot.innov.bins = cut(tot.innov,
+                              breaks = c(-1, 0, 3, 45),
+                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
+  ggplot(aes(y = `urban.area.m2.log`, x = tot.innov.bins)) +
+  geom_boxplot()+
+  xlab("Innovativeness") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= -0.2, y = 0)
+
+p11 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(pasture.area.m2.log) %>%
+  drop_na(tot.innov) %>%
+  mutate(tot.innov.bins = cut(tot.innov,
+                              breaks = c(-1, 0, 3, 45),
+                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
+  ggplot(aes(y = `pasture.area.m2.log`, x = tot.innov.bins))  +
+  geom_boxplot()+
+  xlab("Innovativeness") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= -0.2, y = 0)
+
+p13 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(forest.area.m2.log) %>%
+  drop_na(tot.innov) %>%
+  mutate(tot.innov.bins = cut(tot.innov,
+                              breaks = c(-1, 0, 3, 45),
+                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
+  ggplot(aes(y = `forest.area.m2.log`, x = tot.innov.bins))  +
+  geom_boxplot()+
+  xlab("Innovativeness") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= -0.2, y = 0)
+
+p15 <- coefs_tib %>%
+  # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
+  # left_join(species.traits, by = "bird") %>%
+  drop_na(grass.area.m2.log) %>%
+  drop_na(tot.innov) %>%
+  mutate(tot.innov.bins = cut(tot.innov,
+                              breaks = c(-1, 0, 3, 45),
+                              labels = c("none", "few (< 4)", "many (4-42)"))) %>%
+  ggplot(aes(y = `grass.area.m2.log`, x = tot.innov.bins)) +
+  geom_boxplot()+
+  xlab("Innovativeness") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= -0.2, y = 0)
 
 p2 <- coefs_tib %>%
   pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%

@@ -45,6 +45,101 @@ species.traits.sub <- species.traits %>%
 
 xtable(species.traits.sub, caption = "Bird species traits")
 
+# ---- mean and median abundance changes ----
+
+abund.min40.lc %>%
+  group_by(animal_jetz) %>%
+  reframe(
+    mean.abund = mean(delta.abund),
+    median.abund = median(delta.abund),
+    sd.abund = sd(delta.abund)
+  ) %>%
+  pivot_longer(cols = 2:4, names_to = "variable", values_to = "values") %>%
+  group_by(variable) %>%
+  reframe(mean = mean(values),
+          median = median(values),
+          sd = sd(values)) %>%
+  print(n = 90)
+
+abund.min40.lc %>%
+  group_by(animal_jetz) %>%
+  reframe(
+    # mean.abund = mean(delta.abund),
+    median.abund = median(delta.abund),
+    sd.abund = sd(delta.abund)
+  ) %>%
+  pivot_longer(cols = 2:3, names_to = "variable", values_to = "values") %>%
+  group_by(variable) %>%
+  reframe(
+    n_decrease = sum(values < 0),
+    n_increase = sum(values > 0),
+    mean = mean(values),
+    median = median(values),
+    sd = sd(values)) %>%
+  print(n = 90)
+
+
+# ---- relative abundance changes ----
+load("data/BBS.full.stable.min40.rda")
+load("data/d.abund.min40.rda")
+
+
+
+ttt <-
+  BBS.stable.full.min40 %>%
+  arrange(animal_jetz, segment) %>%
+  group_by(animal_jetz, segment) %>%
+  select(year, segment, animal_jetz, abund.geom.mean) %>%
+  mutate(delta.abund = abund.geom.mean - lag(abund.geom.mean)) %>%
+  group_by(segment, animal_jetz) %>%
+  mutate(n_years = n()) %>%
+  filter(all(abund.geom.mean !=0),
+         animal_jetz %in% abund.min40.lc$animal_jetz,
+         segment %in% abund.min40.lc$segment,
+         n_years == 2
+         ) %>%
+  group_by(year, animal_jetz) %>%
+  reframe(
+    # tot.abund = sum(abund.geom.mean),
+    median.abund = median(abund.geom.mean),
+    mean.abund = mean(abund.geom.mean)
+  ) %>%
+  arrange(animal_jetz) %>%
+  group_by(animal_jetz) %>%
+  mutate(delta.median = median.abund - lag(median.abund))
+
+delta.median <- ttt %>% na.omit() %>%
+  select(delta.median)
+
+median.t1 <- ttt %>%
+  filter(year == 2001) %>%
+  select(median.abund)
+
+tttt <- delta.median %>%
+  left_join(median.t1, by = "animal_jetz") %>%
+  group_by(animal_jetz) %>%
+  mutate(rel_change = delta.median/median.abund*100) %>%
+  ungroup()
+
+tttt %>%
+  reframe(
+    n_pos = sum(rel_change > 5),
+    n_neg = sum(rel_change < -5)
+  )
+
+tttt %>%
+  reframe(median = median(rel_change),
+          sd = sd(rel_change),
+          mean = mean(rel_change))
+
+  # pivot_wider(id_cols = "animal_jetz", names_from = "year", values_from = "tot.abund") %>%
+  # group_by(animal_jetz) %>%
+  # mutate(
+  #   delta = 2019 - 2001,
+  #   rel_change = 2019/2001
+  # ) %>%
+  # ungroup()
+
 # ---- variance ---- 
 
 adj_r2_lc %>%
@@ -187,20 +282,99 @@ dclim %>%
   ) %>%
   pivot_longer(cols = 1:8, names_to = "var", values_to = "values")
 
-# ---- 
+# ---- model results ----
 
 ttt <- adj_r2_lc %>%
   select(bird, adj.r2, adj.r2_clim, adj.r2_lc) %>%
   arrange(bird)
 
+xtable(ttt)
+
+# ---- full LM model results ----
+
+load("results/LMs_swb/LMs_no_crop/beta_coefficients_full_LMs.rda")
+load("results/LMs_swb/LMs_no_crop/beta_coefficients_lc_LMs.rda")
+load("results/LMs_swb/LMs_no_crop/beta_coefficients_clim_LMs.rda")
+load("results/LMs_swb/LMs_no_crop/LOOCV_model_results.rda")
+
+adj_r2_lc <- adj_r2_lc %>%
+  rowwise() %>%
+  mutate(v.clim = adj.r2 - adj.r2_lc,
+         v.lc = adj.r2 - adj.r2_clim,
+         v.joint = adj.r2 - (adj.r2_lc + adj.r2_clim))
+
 adj_r2_lc %>%
   select(bird, adj.r2, adj.r2_clim, adj.r2_lc) %>%
-  pivot_longer(cols = 2:4, names_to = "variable", values_to = "values") %>%
-  group_by(variable) %>%
-  summarize(
-    mean = mean(values),
-    sd = sd(values),
-    median = median(values)
+  pivot_longer(!bird, names_to = "var.type", values_to = "r2s") %>%
+  group_by(var.type) %>%
+  reframe(
+    mean = mean(r2s),
+    median = median(r2s),
+    sd = sd(r2s)
   )
 
-xtable(ttt)
+adj_r2_lc %>%
+  select(bird, v.joint, v.clim, v.lc) %>%
+  pivot_longer(!bird, names_to = "var.type", values_to = "r2s") %>%
+  group_by(var.type) %>%
+  reframe(
+    mean = mean(r2s),
+    median = median(r2s),
+    sd = sd(r2s)
+  )
+
+group1 <- adj_r2_lc_traits %>%
+  drop_na(Migrant) %>%
+  filter(Migrant %in% "Full Migrant") %>%
+  select(Migrant, v.lc)
+
+group2 <- adj_r2_lc_traits %>%
+  drop_na(Migrant) %>%
+  filter(Migrant %in% "Not a Migrant") %>%
+  select(Migrant, v.lc)
+
+# ttt <- kruskal.test(list(group1, group2))
+# 
+# ?kruskal.test
+# 
+# ttt <- wilcox.test(group1, group2)
+# 
+# str(adj_r2_lc_traits)
+
+LOOCV_model_res %>%
+  pivot_longer(!bird, names_to = "metric", values_to = "values") %>%
+  group_by(metric) %>%
+  reframe(
+    metric.mean = mean(values),
+    metric.sd = sd(values)
+  )
+
+clim_model_coefs %>%
+  group_by(variable) %>%
+  reframe(
+    kept_pct = (n()/83)*100,
+    beta.mean = mean(beta.coefs),
+    beta.median = median(beta.coefs),
+    beta.sd = sd(beta.coefs)
+  ) %>%
+  arrange(desc(kept_pct))
+
+lc_model_coefs %>%
+  group_by(variable) %>%
+  reframe(
+    kept_pct = (n()/83)*100,
+    beta.mean = mean(beta.coefs),
+    beta.median = median(beta.coefs),
+    beta.sd = sd(beta.coefs)
+  ) %>%
+  arrange(desc(kept_pct))
+
+full_model_coefs %>%
+  group_by(variable) %>%
+  reframe(
+    kept_pct = (n()/83)*100,
+    beta.mean = mean(beta.coefs),
+    beta.median = median(beta.coefs),
+    beta.sd = sd(beta.coefs)
+  ) %>%
+  arrange(desc(kept_pct))

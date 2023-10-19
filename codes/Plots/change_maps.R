@@ -100,46 +100,46 @@ lc.df <- land_use_area %>%
   )) %>%
   select(year, segment, contains("log"))
 
-tttt <- land_use_area %>%
-  select(-c(ecoregion, tot.area.m2, route, barren.area.m2, wet.area.m2)) %>%
-  mutate(urban.area.m2 = urban.high.area.m2 + urban.low.area.m2,
-         # all.grass.area.m2 = grass.area.m2 + pasture.area.m2
-  ) %>%
-  select(-c(urban.high.area.m2, urban.low.area.m2,
-            # grass.area.m2,
-            # pasture.area.m2,
-            crop.area.m2
-  )) %>%
-  select(year, segment, contains("area"))
+# tttt <- land_use_area %>%
+#   select(-c(ecoregion, tot.area.m2, route, barren.area.m2, wet.area.m2)) %>%
+#   mutate(urban.area.m2 = urban.high.area.m2 + urban.low.area.m2,
+#          # all.grass.area.m2 = grass.area.m2 + pasture.area.m2
+#   ) %>%
+#   select(-c(urban.high.area.m2, urban.low.area.m2,
+#             # grass.area.m2,
+#             # pasture.area.m2,
+#             crop.area.m2
+#   )) %>%
+#   select(year, segment, contains("area"))
 
 # lc.df <- 
-ttt <- land_use_area %>%
-  select(-c(ecoregion, tot.area.m2, route, barren.area.m2, wet.area.m2)) %>%
-  mutate(urban.area.m2 = urban.high.area.m2 + urban.low.area.m2) %>%
-  select(-c(urban.high.area.m2, urban.low.area.m2, crop.area.m2)) %>%
-  # rowwise() %>%
-  group_by(segment) %>%
-  arrange(segment, year) %>%
-  mutate(
-    across(
-      .cols = contains("area"),
-      .fns = c(
-        delta = \(x) ifelse((x != 0 | lag(x) != 0), x-lag(x), 0)),
-      .names = "{.fn}.{col}"
-    )
-  ) %>%
-  mutate(across(
-    .cols = contains("area"),
-    .fns = c(
-      pct_change = \(x) ifelse((x != 0 | lag(x) != 0), (x - lag(x)) / x , 0)
-                               )
-    ,
-    .names = "{.col}.{.fn}"
-  )) %>%
-  # filter(year == 2019) %>%
-  arrange(segment) #%>%
-  # na.omit() %>%
-  # select(year, segment, contains("delta"), contains("pct"))
+# ttt <- land_use_area %>%
+#   select(-c(ecoregion, tot.area.m2, route, barren.area.m2, wet.area.m2)) %>%
+#   mutate(urban.area.m2 = urban.high.area.m2 + urban.low.area.m2) %>%
+#   select(-c(urban.high.area.m2, urban.low.area.m2, crop.area.m2)) %>%
+#   # rowwise() %>%
+#   group_by(segment) %>%
+#   arrange(segment, year) %>%
+#   mutate(
+#     across(
+#       .cols = contains("area"),
+#       .fns = c(
+#         delta = \(x) ifelse((x != 0 | lag(x) != 0), x-lag(x), 0)),
+#       .names = "{.fn}.{col}"
+#     )
+#   ) %>%
+#   mutate(across(
+#     .cols = contains("area"),
+#     .fns = c(
+#       pct_change = \(x) ifelse((x != 0 | lag(x) != 0), (x - lag(x)) / x , 0)
+#                                )
+#     ,
+#     .names = "{.col}.{.fn}"
+#   )) %>%
+#   # filter(year == 2019) %>%
+#   arrange(segment) #%>%
+#   # na.omit() %>%
+#   # select(year, segment, contains("delta"), contains("pct"))
 
 dlc <- lc.df %>%
   arrange(segment) %>%
@@ -147,26 +147,60 @@ dlc <- lc.df %>%
   mutate(
     across(
       .cols = matches('area') | matches('log'),
-      # .fns = \(.) lag(.)-.,
       .fns = ~ ifelse(!is.na(lag(.)), . - lag(.), NA),
       .names = "delta.{col}"
     )
-  ) %>%
-  select(segment, contains("delta")) %>%
-  na.omit()
+  ) #%>%
+  # select(segment, contains("delta")) %>%
+  # na.omit()
 
-d.tttt <- tttt %>%
+tttt <- lc.df %>%
   arrange(segment) %>%
   group_by(segment) %>%
   mutate(
     across(
-      .cols = matches('area'),
-      .fns = ~ ifelse(!is.na(lag(.)), . - lag(.), NA),
-      .names = "delta.{col}"
+      .cols = matches('area') | matches('log'),
+      .fns = ~ ifelse(!is.na(lag(.)), ((. - lag(.)) / .) *100, NA),
+      .names = "relative_change_{.col}"
     )
   ) %>%
-  select(segment, contains("delta")) %>%
-  na.omit()
+  na.omit() %>%
+  select(year, segment, contains("relative"))
+
+tttt %>%
+  pivot_longer(cols = 3:6, names_to = "vars", values_to = "values") %>%
+  group_by(vars) %>%
+  reframe(median = median(values),
+          mean = mean(values),
+          sd = sd(values))
+
+grass.t1 <- dlc %>% select(year, segment, contains("grass"), -contains("delta")) %>% filter(year == 2001)
+
+delta.grass <- dlc %>% select(year, segment, contains("grass")) %>% na.omit() %>% select(-grass.area.m2.log)
+
+grass.t1 %>%
+  left_join(delta.grass, by = "segment") %>%
+  mutate(rel_change = ifelse(delta.grass.area.m2.log >0, delta.grass.area.m2.log/grass.area.m2.log*100, 0)) %>%
+  ungroup() %>%
+  reframe(median = median(rel_change),
+          mean = mean(rel_change),
+          sd = sd(rel_change),
+          median.delta = median(delta.grass.area.m2.log),
+          mean.delta = mean(delta.grass.area.m2.log),
+          sd.delta = sd(delta.grass.area.m2.log))
+
+# d.tttt <- tttt %>%
+#   arrange(segment) %>%
+#   group_by(segment) %>%
+#   mutate(
+#     across(
+#       .cols = matches('area'),
+#       .fns = ~ ifelse(!is.na(lag(.)), . - lag(.), NA),
+#       .names = "delta.{col}"
+#     )
+#   ) %>%
+#   select(segment, contains("delta")) %>%
+#   na.omit()
 
 # bbs.lc <- bbs.routes.buffered %>% left_join(d.tttt, by = "segment") %>% na.omit()
 
@@ -175,25 +209,23 @@ bbs.lc <- bbs.routes.buffered %>% left_join(dlc, by = "segment") %>% na.omit()
 rm(land_use_area, lc.df)
 
 
-# --- stats and tables ----
-
-
-
-d.tttt %>%
-  ungroup() %>%
-  na.omit() %>%
-  summarize(
-    across(
-      .cols = matches("delta"),
-      .fns = list(
-        mean = \(.) mean(.),
-        # median = \(.) median(.),
-        sd = \(.) sd(.)
-      ),
-      .names = "{.fn}.{col}"
-    )
-  ) %>%
-  pivot_longer(cols = 1:8, names_to = "var", values_to = "values")
+# ---- stats and tables ----
+# 
+# d.tttt %>%
+#   ungroup() %>%
+#   na.omit() %>%
+#   summarize(
+#     across(
+#       .cols = matches("delta"),
+#       .fns = list(
+#         mean = \(.) mean(.),
+#         # median = \(.) median(.),
+#         sd = \(.) sd(.)
+#       ),
+#       .names = "{.fn}.{col}"
+#     )
+#   ) %>%
+#   pivot_longer(cols = 1:8, names_to = "var", values_to = "values")
 
 dabund_ridges <-
   abund.min40.lc %>%
@@ -496,27 +528,29 @@ usa_map_forest <- ggplot() +
   ) +
   theme(legend.position = "bottom")
 
-# usa_map_forest <- ggplot() +
-#   geom_sf(data = usa_5070,
-#           fill = "white", color = "grey20", linewidth = 0.3, alpha = 0.8
-#   ) +
-#   geom_sf(data = bbs.lc,
-#           aes(
-#             fill = delta.forest.area.m2,
-#             color = delta.forest.area.m2
-#           ),
-#           # linewidth = 1,
-#           alpha = 1
-#   ) +
-#   theme_bw() +
-#   scale_colour_viridis_c(option = "magma") +
-#   scale_fill_viridis_c(option = "magma") +
-#   guides(
-#     fill= "none",
-#     # guide_legend = "delta Tmax",
-#     color = guide_colorbar("delta Forest")
-#   ) +
-#   theme(legend.position = "bottom")
+bbs.lc %>%
+  filter(delta.forest.area.m2.log > -1,
+         delta.forest.area.m2.log < 1) %>%
+  ggplot() +
+  geom_sf(data = usa_5070,
+          fill = "white", color = "grey20", linewidth = 0.3, alpha = 0.8
+  ) +
+  geom_sf(
+    # data = tttt,
+    aes(
+      fill = delta.forest.area.m2.log,
+      color = delta.forest.area.m2.log
+    ),
+    alpha = 1
+  ) +
+  theme_bw() +
+  scale_colour_viridis_c(option = "magma") +
+  scale_fill_viridis_c(option = "magma") +
+  guides(
+    fill= "none",
+    color = guide_colorbar("delta Forest")
+  ) +
+  theme(legend.position = "bottom")
 
 usa_map_forest
 
@@ -551,6 +585,29 @@ usa_map_urban <-
   ) +
   theme(legend.position = "bottom")
 
+bbs.lc %>%
+  filter(delta.urban.area.m2.log < 1, delta.urban.area.m2.log > 0) %>%
+  ggplot() +
+  geom_sf(data = usa_5070,
+          fill = "white", color = "grey20", linewidth = 0.3, alpha = 0.8
+  ) +
+  geom_sf(
+    # data = tttt,
+    aes(
+      fill = delta.urban.area.m2.log,
+      color = delta.urban.area.m2.log
+    ),
+    alpha = 1
+  ) +
+  theme_bw() +
+  scale_colour_viridis_c(option = "magma") +
+  scale_fill_viridis_c(option = "magma") +
+  guides(
+    fill= "none",
+    color = guide_colorbar("delta Urban")
+  ) +
+  theme(legend.position = "bottom")
+
 usa_map_urban
 
 ggsave(usa_map_urban, file = "figures/usa_map_urban.png", width = 8, height = 6, dpi = 300)
@@ -577,6 +634,30 @@ usa_map_grass <- ggplot() +
   ) +
   theme(legend.position = "bottom")
 
+bbs.lc %>%
+  filter(delta.grass.area.m2.log > -1,
+         delta.grass.area.m2.log < 1) %>%
+  ggplot() +
+  geom_sf(data = usa_5070,
+          fill = "white", color = "grey20", linewidth = 0.3, alpha = 0.8
+  ) +
+  geom_sf(
+    # data = tttt,
+    aes(
+      fill = delta.grass.area.m2.log,
+      color = delta.grass.area.m2.log
+    ),
+    alpha = 1
+  ) +
+  theme_bw() +
+  scale_colour_viridis_c(option = "magma") +
+  scale_fill_viridis_c(option = "magma") +
+  guides(
+    fill= "none",
+    color = guide_colorbar("delta Grass")
+  ) +
+  theme(legend.position = "bottom")
+
 usa_map_grass
 
 ggsave(usa_map_grass, file = "figures/usa_map_grass.png", width = 8, height = 6, dpi = 300)
@@ -599,6 +680,31 @@ usa_map_pasture <- ggplot() +
   guides(
     fill= "none",
     # guide_legend = "delta Tmax",
+    color = guide_colorbar("delta Pasture")
+  ) +
+  theme(legend.position = "bottom")
+
+
+bbs.lc %>%
+  filter(delta.pasture.area.m2.log > -1,
+         delta.pasture.area.m2.log < 1) %>%
+  ggplot() +
+  geom_sf(data = usa_5070,
+          fill = "white", color = "grey20", linewidth = 0.3, alpha = 0.8
+  ) +
+  geom_sf(
+    # data = tttt,
+    aes(
+      fill = delta.pasture.area.m2.log,
+      color = delta.pasture.area.m2.log
+    ),
+    alpha = 1
+  ) +
+  theme_bw() +
+  scale_colour_viridis_c(option = "magma") +
+  scale_fill_viridis_c(option = "magma") +
+  guides(
+    fill= "none",
     color = guide_colorbar("delta Pasture")
   ) +
   theme(legend.position = "bottom")
