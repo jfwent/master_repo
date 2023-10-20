@@ -1,7 +1,7 @@
 # make tables
 # date: 13.10.2023
 
-# -----
+# ---- libraries ----
 # install.packages("sjPlot")
 # library(sjPlot)
 # install.packages("stargazer")
@@ -184,60 +184,204 @@ adj_r2_lc %>%
 
 # ---- land use change ----
 
-lc.df %>%
-  select(segment, contains("delta")) %>%
+land_t1 <- land_use_area %>%
+  select(-c(ecoregion, tot.area.m2, route, barren.area.m2, wet.area.m2)) %>%
+  mutate(urban.area.m2 = urban.high.area.m2 + urban.low.area.m2,
+  ) %>%
+  select(-c(urban.high.area.m2, urban.low.area.m2,
+            crop.area.m2
+  )) %>%
+  filter(year == 2001) %>%
   ungroup() %>%
-  pivot_longer(cols = 2:5, names_to = "var", values_to = "val") %>%
-  group_by(var) %>%
+  pivot_longer(cols = 3:6, names_to = "lc", values_to = "val") %>%
+  group_by(lc) %>%
   summarize(
     mean = mean(val),
     median = median(val),
-    sd = sd(val)
-  )
-
-lc.df %>%
-  select(segment, contains("delta")) %>%
+    sd = sd(val),
+    amount = sum(val),
+  ) %>%
   ungroup() %>%
-  pivot_longer(cols = 2:5, names_to = "var", values_to = "val") %>%
-  ggplot(aes(y = val, x = var)) +
-  geom_violin()
+  mutate(
+    tot.amount = sum(amount)
+  ) %>%
+  group_by(lc) %>%
+  mutate(rel_amount = amount/tot.amount*100)  %>%
+  # pivot_longer(cols = 2:7, names_to = "var", values_to = "val") %>%
+  mutate(year = 2001)
 
-lc.df %>%
-  select(segment, contains("delta")) %>%
+land_t2 <- land_use_area %>%
+  select(-c(ecoregion, tot.area.m2, route, barren.area.m2, wet.area.m2)) %>%
+  mutate(urban.area.m2 = urban.high.area.m2 + urban.low.area.m2,
+  ) %>%
+  select(-c(urban.high.area.m2, urban.low.area.m2,
+            crop.area.m2
+  )) %>%
+  filter(year == 2019) %>%
   ungroup() %>%
-  pivot_longer(cols = 2:5, names_to = "var", values_to = "val") %>%
-  ggplot(aes(x = val, y = var)) +
-  ggridges::geom_density_ridges_gradient(
-    scale = 1,
-    rel_min_height = 0.005
-  ) +
-  xlim(-2, 2)
-
-lc.df %>%
-  select(segment, contains("delta")) %>%
-  ungroup() %>%
-  # pivot_longer(cols = 2:5, names_to = "var", values_to = "val") %>%
-  ggplot() +
-  # geom_histogram(aes(x = delta.urban.area.m2.log), bins = 80) +
-  geom_histogram(aes(x = delta.forest.area.m2.log), bins = 80)
-
-dlc %>%
-  ungroup() %>%
+  pivot_longer(cols = 3:6, names_to = "lc", values_to = "val") %>%
+  group_by(lc) %>%
   summarize(
+    mean = mean(val),
+    median = median(val),
+    sd = sd(val),
+    amount = sum(val),
+  ) %>%
+  ungroup() %>%
+  mutate(
+    tot.amount = sum(amount)
+  ) %>%
+  group_by(lc) %>%
+  mutate(rel_amount = amount/tot.amount*100) %>%
+  mutate(year = 2019)22
+
+land_seg_t1 <- land_use_area %>%
+  select(-c(ecoregion, tot.area.m2, route, barren.area.m2, wet.area.m2)) %>%
+  mutate(urban.area.m2 = urban.high.area.m2 + urban.low.area.m2,
+  ) %>%
+  select(-c(urban.high.area.m2, urban.low.area.m2,
+            crop.area.m2
+  )) %>%
+  ungroup() %>%
+  group_by(segment) %>%
+  rowwise() %>%
+  mutate(
+    tot.amount = sum(c_across(2:5))
+  ) %>%
+  mutate(across(
+    .cols = matches("area"),
+    .fns = list(
+      rel.amount = \(x) x/tot.amount*100
+    ),
+    .names = "{.fn}.{.col}"
+  )) %>%
+  filter(year == 2001) %>%
+  ungroup() %>%
+  na.omit() %>%
+  reframe(
     across(
-      .cols = matches("delta"),
+      .cols = matches("area"),
       .fns = list(
-        mean = \(.) mean(.),
-        # median = \(.) median(.),
-        sd = \(.) sd(.)
+        mean = \(x) mean(x),
+        sd = \(x) sd(x)
       ),
-      .names = "{.fn}.{col}"
+      .names = "{.fn}.{.col}"
     )
   ) %>%
-  pivot_longer(cols = 1:8, names_to = "var", values_to = "values") #%>%
-# mutate(pct_change = values/400000)
+  pivot_longer(cols = 1:16, names_to = "var",values_to = "val")
+
+land_seg_t2 <- land_use_area %>%
+  select(-c(ecoregion, tot.area.m2, route, barren.area.m2, wet.area.m2)) %>%
+  mutate(urban.area.m2 = urban.high.area.m2 + urban.low.area.m2,
+  ) %>%
+  select(-c(urban.high.area.m2, urban.low.area.m2,
+            crop.area.m2
+  )) %>%
+  ungroup() %>%
+  group_by(segment) %>%
+  rowwise() %>%
+  mutate(
+    tot.amount = sum(c_across(2:5))
+  ) %>%
+  mutate(across(
+    .cols = matches("area"),
+    .fns = list(
+      rel.amount = \(x) x/tot.amount*100
+    ),
+    .names = "{.fn}.{.col}"
+  )) %>%
+  filter(year == 2019) %>%
+  ungroup() %>%
+  na.omit() %>%
+  reframe(
+    across(
+      .cols = matches("area"),
+      .fns = list(
+        mean = \(x) mean(x),
+        sd = \(x) sd(x)
+      ),
+      .names = "{.fn}.{.col}"
+    )
+  ) %>%
+  pivot_longer(cols = 1:16, names_to = "var",values_to = "val")
+
+
+# lc.df %>%
+#   select(segment, contains("delta")) %>%
+#   ungroup() %>%
+#   pivot_longer(cols = 2:5, names_to = "var", values_to = "val") %>%
+#   ggplot(aes(y = val, x = var)) +
+#   geom_violin()
+# 
+# lc.df %>%
+#   select(segment, contains("delta")) %>%
+#   ungroup() %>%
+#   pivot_longer(cols = 2:5, names_to = "var", values_to = "val") %>%
+#   ggplot(aes(x = val, y = var)) +
+#   ggridges::geom_density_ridges_gradient(
+#     scale = 1,
+#     rel_min_height = 0.005
+#   ) +
+#   xlim(-2, 2)
+# 
+# lc.df %>%
+#   select(segment, contains("delta")) %>%
+#   ungroup() %>%
+#   # pivot_longer(cols = 2:5, names_to = "var", values_to = "val") %>%
+#   ggplot() +
+#   # geom_histogram(aes(x = delta.urban.area.m2.log), bins = 80) +
+#   geom_histogram(aes(x = delta.forest.area.m2.log), bins = 80)
+# 
+# dlc %>%
+#   ungroup() %>%
+#   summarize(
+#     across(
+#       .cols = matches("delta"),
+#       .fns = list(
+#         mean = \(.) mean(.),
+#         # median = \(.) median(.),
+#         sd = \(.) sd(.)
+#       ),
+#       .names = "{.fn}.{col}"
+#     )
+#   ) %>%
+#   pivot_longer(cols = 1:8, names_to = "var", values_to = "values") #%>%
+# # mutate(pct_change = values/400000)
 
 # ---- climate change -----
+
+# clim_seg_t1 <- 
+climate.df %>%
+  filter(year == 2001,
+         segment %in% d.abund.min40$segment) %>%
+  ungroup() %>%
+  reframe(
+    across(
+      .cols = matches("mean"),
+      .fns = list(
+        mean = \(x) mean(x),
+        sd = \(x) sd(x)
+      ),
+      .names = "{.fn}.{.col}"
+    )
+  ) %>%
+  pivot_longer(cols = 1:8, names_to = "var",values_to = "val")
+
+climate.df %>%
+  filter(year == 2019,
+         segment %in% d.abund.min40$segment) %>%
+  ungroup() %>%
+  reframe(
+    across(
+      .cols = matches("mean"),
+      .fns = list(
+        mean = \(x) mean(x),
+        sd = \(x) sd(x)
+      ),
+      .names = "{.fn}.{.col}"
+    )
+  ) %>%
+  pivot_longer(cols = 1:8, names_to = "var",values_to = "val")
 
 clim.df %>%
   select(segment, contains("delta")) %>%
