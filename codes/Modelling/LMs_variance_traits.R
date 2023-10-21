@@ -120,6 +120,7 @@ trait_LM_res %>%
   arrange(p.val)
 
 save(trait_LM_res, file = "results/traits_variance_LMs.rda")
+load("results/traits_variance_LMs.rda")
 
 rm(mod.tmp, tib_tmp, beta.coefs, model_types, model.type.ind, p.val, trait.ind, traits)
 
@@ -171,10 +172,10 @@ for(mod.types in model_types){
 
 rm(pb, train_control, trait_mods, trait.tmp, form.tmp, mod.types, model_types, trait.ind, traits, model.tmp)
 
-
 # ---- find p values ----
 
 traits <- colnames(species.traits[2:15])
+
 model_types <- colnames(coefs_tib[2:9])
 
 beta_LM_res <- tibble(trait = character(),
@@ -205,7 +206,16 @@ beta_LM_res %>%
   filter(p.val < 0.1) %>%
   arrange(p.val)
 
+beta_LM_res_adj <- beta_LM_res %>%
+  mutate(p.val.adj = p.val * length(p.val)) %>%
+  filter(p.val < 0.1) %>%
+  arrange(p.val.adj) %>%
+  filter(!(trait %in% c("ACAD.ind", "sauer.trend", "initial.abundance")))
+
 save(beta_LM_res, file = "results/traits_beta_coefs_LMs.rda")
+load("results/traits_beta_coefs_LMs.rda")
 
 rm(mod.tmp, tib_tmp, beta.coefs, model_types, model.type.ind, p.val, trait.ind, traits)
+
+
 

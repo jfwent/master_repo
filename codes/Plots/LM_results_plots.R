@@ -1067,7 +1067,326 @@ stacked_final <- diet.plot + habitat.plot + trophic.niche.plot + trophic.level.p
 
 stacked_final
 
-# ---- beta coefs vs gen length plots ----
+# ---- save selected beta coef plots ----
+
+p1 <- coefs_tib %>%
+  drop_na(delta.tmin.mean) %>%
+  ggplot(aes(y = `delta.tmin.mean`, x = diet.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm", linetype = "dotdash") +
+  xlab("Diet breadth")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Tmin")
+
+p2 <- coefs_tib %>%
+  filter(!(Trophic.Level %in% "Scavenger")) %>%
+  drop_na(delta.grass.area.m2.log) %>%
+  drop_na(Trophic.Level) %>%
+  ggplot(aes(y = `delta.grass.area.m2.log`, x = Trophic.Level)) +
+  geom_boxplot() +
+  xlab("Trophic Level") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= 0.7, y = c(0.9, -0.5, 0.9)) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")  +
+  ylab("delta Grassland")
+
+p3 <- coefs_tib %>%
+  drop_na(delta.tmin.mean) %>%
+  ggplot(aes(y = `delta.tmin.mean`, x = hand.wing.ind)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Hand-wing ind.")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Tmin")
+
+p4 <- coefs_tib %>%
+  drop_na(delta.urban.area.m2.log) %>%
+  ggplot(aes(y = `delta.urban.area.m2.log`, x = Clutch.Bird)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Clutch size")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Urban")
+
+# p4 <- coefs_tib %>%
+#   drop_na(delta.pasture.area.m2.log) %>%
+#   ggplot(aes(y = `delta.pasture.area.m2.log`, x = Clutch.Bird)) +
+#   geom_point(size = 2, alpha = 0.5) +
+#   geom_smooth(method = "lm") +
+#   xlab("Clutch size")+
+#   theme_bw() +
+#   theme(
+#     panel.border = element_blank(),
+#     legend.position = "none",
+#     panel.grid.major = element_blank(),
+#     panel.grid.minor = element_blank(),
+#     axis.line = element_line(color = "black")) +
+#   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+#   ylab("delta Pasture")
+
+beta_coef_selected <- p1 + p3 + p2 + p4
+beta_coef_selected
+
+ggsave(filename = "figures/LM_Results/beta_coef_selected.png", plot = beta_coef_selected,
+       width = 8, height = 6, dpi = 300)
+
+# ---- other interesting beta coef plots ----
+
+p1 <- coefs_tib %>%
+  drop_na(delta.tmax.mean) %>%
+  ggplot(aes(y = `delta.tmax.mean`, x = log(tot.innov+1))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Innovations)")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Tmax")
+
+p2 <- coefs_tib %>%
+  drop_na(delta.cmi.diff.mean) %>%
+  ggplot(aes(y = `delta.cmi.diff.mean`, x = log(tot.innov+1))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm", linetype = "dotdash") +
+  xlab("log(Innovations)")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta CMI diff.")
+
+p3 <- coefs_tib %>%
+  drop_na(delta.pasture.area.m2.log) %>%
+  ggplot(aes(y = `delta.pasture.area.m2.log`, x = log(tot.innov+1))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Innovations)")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Pasture")
+
+# p4 <- coefs_tib %>%
+#   drop_na(delta.cmi.diff.mean) %>%
+#   ggplot(aes(y = `delta.cmi.diff.mean`, x = diet.breadth)) +
+#   geom_point(size = 2, alpha = 0.5) +
+#   geom_smooth(method = "lm") +
+#   xlab("Diet breadth")+
+#   theme_bw() +
+#   theme(
+#     panel.border = element_blank(),
+#     legend.position = "none",
+#     panel.grid.major = element_blank(),
+#     panel.grid.minor = element_blank(),
+#     axis.line = element_line(color = "black")) +
+#   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+#   ylab("delta CMI diff.")
+
+p5 <- coefs_tib %>%
+  filter(!(Trophic.Level %in% "Scavenger")) %>%
+  drop_na(delta.swb.mean) %>%
+  drop_na(Trophic.Level) %>%
+  ggplot(aes(y = `delta.swb.mean`, x = Trophic.Level)) +
+  geom_boxplot() +
+  xlab("Trophic Level") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= 0.5, y = 4) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")  +
+  ylab("delta SWB")
+
+diet_beta_plot <- p1 + p2 + p3 + p5
+diet_beta_plot
+
+p1 <- coefs_tib %>%
+  drop_na(delta.tmax.mean) %>%
+  drop_na(Migrant) %>%
+  ggplot(aes(y = `delta.tmax.mean`, x = Migrant)) +
+  geom_boxplot() +
+  xlab("Migrant") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= -0.2, y = 2) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")  +
+  ylab("delta Tmax")
+
+p4 <- coefs_tib %>%
+  drop_na(delta.pasture.area.m2.log) %>%
+  ggplot(aes(y = `delta.pasture.area.m2.log`, x = hand.wing.ind)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Hand-wing ind.")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Pasture")
+
+p3 <- coefs_tib %>%
+  drop_na(delta.forest.area.m2.log) %>%
+  ggplot(aes(y = `delta.forest.area.m2.log`, x = hand.wing.ind)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Hand-wing ind.")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Forest")
+
+p2 <- coefs_tib %>%
+  drop_na(delta.tmin.mean) %>%
+  ggplot(aes(y = `delta.tmin.mean`, x = hand.wing.ind)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Hand-wing ind.")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Tmin")
+
+dispersal_beta_plot <- p1+p2+p3+p4
+dispersal_beta_plot
+
+p1 <- coefs_tib %>%
+  drop_na(delta.pasture.area.m2.log) %>%
+  ggplot(aes(y = `delta.pasture.area.m2.log`, x = Clutch.Bird)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Clutch size")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Pasture")
+
+p2 <- coefs_tib %>%
+  drop_na(delta.tmax.mean) %>%
+  ggplot(aes(y = `delta.tmax.mean`, x = rel_brain_size)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Rel. brain size")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Tmax")
+
+beta_life_hist_plot <- p1 + p2
+beta_life_hist_plot
+
+# ---- save beta coef plots ----
+
+ggsave(filename = "figures/LM_Results/beta_life_hist.png", plot = beta_life_hist_plot,
+              width = 8, height = 6, dpi = 300)
+
+ggsave(filename = "figures/LM_Results/beta_diet.png", plot = diet_beta_plot,
+       width = 8, height = 6, dpi = 300)
+
+ggsave(filename = "figures/LM_Results/beta_dispersal.png", plot = dispersal_beta_plot,
+       width = 8, height = 6, dpi = 300)
+
+# ggsave(filename = "figures/LM_Results/beta_coef_wing_climate.png", plot = coef_plot_wing_climate,
+#        width = 8, height = 6, dpi = 300)
+# ggsave(filename = "figures/LM_Results/beta_coef_wing_landcover.png", plot = coef_plot_wing_landcover,
+#        width = 8, height = 6, dpi = 300)
+# ggsave(filename = "figures/LM_Results/beta_coef_diet_climate.png", plot = coef_plot_diet_climate,
+#        width = 8, height = 6, dpi = 300)
+# ggsave(filename = "figures/LM_Results/beta_coef_diet_landcover.png", plot = coef_plot_diet_landcover,
+#        width = 8, height = 6, dpi = 300)
+# ggsave(filename = "figures/LM_Results/beta_coef_gen_length_climate.png", plot = coef_plot_gen_length_climate,
+#        width = 8, height = 6, dpi = 300)
+# ggsave(filename = "figures/LM_Results/beta_coef_gen_length_landcover.png", plot = coef_plot_gen_length_landcover,
+#        width = 8, height = 6, dpi = 300)
+# ggsave(filename = "figures/LM_Results/beta_coef_innovations_climate.png", plot = coef_plot_innov_climate,
+#        width = 8, height = 6, dpi = 300)
+# ggsave(filename = "figures/LM_Results/beta_coef_innovations_landcover.png", plot = coef_plot_innov_landcover,
+#        width = 8, height = 6, dpi = 300)
+# ggsave(filename = "figures/LM_Results/beta_coef_migrant_climate.png", plot = coef_plot_migrant_climate,
+#        width = 8, height = 6, dpi = 300)
+# ggsave(filename = "figures/LM_Results/beta_coef_migrant_landcover.png", plot = coef_plot_migrant_landcover,
+#        width = 8, height = 6, dpi = 300)
+# ggsave(filename = "figures/LM_Results/beta_coef_abund.png", plot = coef_plot_abund,
+#        width = 8, height = 6, dpi = 300)
+
+# ===== Old ----
+# ---- beta coefs vs traits plots ----
+# ---- beta coefs vs gen length plots
 
 p2 <- coefs_tib %>%
   drop_na(delta.tmax.mean) %>%
@@ -1214,7 +1533,7 @@ p16 <- coefs_tib %>%
 coef_plot_gen_length_landcover <- p10 + p12 + p14 + p16
 coef_plot_gen_length_landcover
 
-# ---- beta coefs vs diet breadth plots ----
+# ---- beta coefs vs diet breadth plots
 
 p2 <- coefs_tib %>%
   drop_na(delta.tmax.mean) %>%
@@ -1364,7 +1683,7 @@ p16 <- coefs_tib %>%
 coef_plot_diet_landcover <- p10 + p12 + p14 + p16 
 coef_plot_diet_landcover
 
-# ---- beta coefs vs migrant plots ----
+# ---- beta coefs vs migrant plots
 
 p2 <- coefs_tib %>%
   # pivot_wider(id_cols = bird, names_from = "variable", values_from = "beta.coefs") %>%
@@ -1533,7 +1852,7 @@ p16 <- coefs_tib %>%
 coef_plot_migrant_landcover <- p10 + p12 + p14 + p16
 coef_plot_migrant_landcover
 
-# ---- beta coefs vs innovativeness plots ----
+# ---- beta coefs vs innovativeness plots
 
 p1 <- coefs_tib %>%
   drop_na(delta.tmax.mean) %>%
@@ -1669,7 +1988,7 @@ p1 <- coefs_tib %>%
 coef_plot_innov_landcover <- p1 + p2 + p3 + p4
 coef_plot_innov_landcover
 
-# ---- beta coefs vs hand wing ind ----
+# ---- beta coefs vs hand wing ind
 
 p1 <- coefs_tib %>%
   drop_na(delta.tmax.mean) %>%
@@ -1805,7 +2124,7 @@ p1 <- coefs_tib %>%
 coef_plot_wing_landcover <- p1 + p2 + p3 + p4
 coef_plot_wing_landcover
 
-# ---- beta coefs vs initial abundance plots ----
+# ---- beta coefs vs initial abundance plots
 
 p2 <- coefs_tib %>%
   drop_na(delta.tmax.mean) %>%
@@ -1953,141 +2272,6 @@ coef_plot_abund <- p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + p11 + p12 
 
 coef_plot_abund
 
-# ---- save selected beta coef plots ----
-
-p6 <- coefs_tib %>%
-  drop_na(delta.urban.area.m2.log) %>%
-  ggplot(aes(y = `delta.urban.area.m2.log`, x = Clutch.Bird)) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm", linetype = "dotdash") +
-  xlab("Clutch size")+
-  theme_bw() +
-  theme(
-    panel.border = element_blank(),
-    legend.position = "none",
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    axis.line = element_line(color = "black")) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
-  ylab("delta Urban")
-
-p5 <- coefs_tib %>%
-  filter(!(Trophic.Level %in% "Scavenger")) %>%
-  drop_na(delta.swb.mean) %>%
-  drop_na(Trophic.Level) %>%
-  ggplot(aes(y = `delta.swb.mean`, x = Trophic.Level)) +
-  geom_boxplot() +
-  xlab("Trophic Level") +
-  geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 4) +
-  theme_bw() +
-  theme(
-    panel.border = element_blank(),
-    legend.position = "none",
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    axis.line = element_line(color = "black")) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")  +
-  ylab("delta SWB")
-
-p1 <- coefs_tib %>%
-  drop_na(delta.tmin.mean) %>%
-  ggplot(aes(y = `delta.tmin.mean`, x = diet.breadth)) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm", linetype = "dotdash") +
-  xlab("Diet breadth")+
-  theme_bw() +
-  theme(
-    panel.border = element_blank(),
-    legend.position = "none",
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    axis.line = element_line(color = "black")) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
-  ylab("delta Tmin") +
-  ylim(-6, 2)
-
-p2 <- coefs_tib %>%
-  drop_na(delta.pasture.area.m2.log) %>%
-  ggplot(aes(y = `delta.pasture.area.m2.log`, x = hand.wing.ind)) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm", linetype = "dotdash") +
-  xlab("Hand-wing ind.")+
-  theme_bw() +
-  theme(
-    panel.border = element_blank(),
-    legend.position = "none",
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    axis.line = element_line(color = "black")) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
-  ylab("delta Pasture")
-
-p3 <- coefs_tib %>%
-  drop_na(delta.tmax.mean) %>%
-  drop_na(Migrant) %>%
-  ggplot(aes(y = `delta.tmax.mean`, x = Migrant)) +
-  geom_boxplot() +
-  xlab("Migrant") +
-  geom_text(aes(label = ..count..),
-            stat = "count", vjust= -0.2, y = 2) +
-  theme_bw() +
-  theme(
-    panel.border = element_blank(),
-    legend.position = "none",
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    axis.line = element_line(color = "black")) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")  +
-  ylab("delta Tmax")
-
-p4 <- coefs_tib %>%
-  drop_na(delta.grass.area.m2.log) %>%
-  ggplot(aes(y = `delta.grass.area.m2.log`, x = log(tot.innov+1))) +
-  geom_point(size = 2, alpha = 0.5) +
-  geom_smooth(method = "lm", linetype = "dotdash") +
-  xlab("log(Innovations)")+
-  theme_bw() +
-  theme(
-    panel.border = element_blank(),
-    legend.position = "none",
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    axis.line = element_line(color = "black")) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
-  ylab("delta Grassland")
-
-beta_coef_selected <- p1 + p5 + p3 + p4 +p2  + p6
-beta_coef_selected
-
-ggsave(filename = "figures/LM_Results/beta_coef_selected.png", plot = beta_coef_selected,
-       width = 8, height = 6, dpi = 300)
-
-# ---- save beta coef plots ----
-ggsave(filename = "figures/LM_Results/beta_coef_wing_climate.png", plot = coef_plot_wing_climate,
-       width = 8, height = 6, dpi = 300)
-ggsave(filename = "figures/LM_Results/beta_coef_wing_landcover.png", plot = coef_plot_wing_landcover,
-       width = 8, height = 6, dpi = 300)
-ggsave(filename = "figures/LM_Results/beta_coef_diet_climate.png", plot = coef_plot_diet_climate,
-       width = 8, height = 6, dpi = 300)
-ggsave(filename = "figures/LM_Results/beta_coef_diet_landcover.png", plot = coef_plot_diet_landcover,
-       width = 8, height = 6, dpi = 300)
-ggsave(filename = "figures/LM_Results/beta_coef_gen_length_climate.png", plot = coef_plot_gen_length_climate,
-       width = 8, height = 6, dpi = 300)
-ggsave(filename = "figures/LM_Results/beta_coef_gen_length_landcover.png", plot = coef_plot_gen_length_landcover,
-       width = 8, height = 6, dpi = 300)
-ggsave(filename = "figures/LM_Results/beta_coef_innovations_climate.png", plot = coef_plot_innov_climate,
-       width = 8, height = 6, dpi = 300)
-ggsave(filename = "figures/LM_Results/beta_coef_innovations_landcover.png", plot = coef_plot_innov_landcover,
-       width = 8, height = 6, dpi = 300)
-ggsave(filename = "figures/LM_Results/beta_coef_migrant_climate.png", plot = coef_plot_migrant_climate,
-       width = 8, height = 6, dpi = 300)
-ggsave(filename = "figures/LM_Results/beta_coef_migrant_landcover.png", plot = coef_plot_migrant_landcover,
-       width = 8, height = 6, dpi = 300)
-ggsave(filename = "figures/LM_Results/beta_coef_abund.png", plot = coef_plot_abund,
-       width = 8, height = 6, dpi = 300)
-
-# ===== Old ----
 # ---- beta coefs vs gen length plots ----
 # coef_plot_gen_length <- p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + 
 #   p10 +
