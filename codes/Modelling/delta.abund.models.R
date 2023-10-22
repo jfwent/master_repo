@@ -361,15 +361,17 @@ for(variable.ind in vars){
   univar_mods[[variable.ind]] <- bird_mods
 }
 
-rm(train_control, pb, bird_mods, model.tmp, form.tmp, bird.tmp, birds, vars, variable.ind)
+rm(train_control, pb, bird_mods, model.tmp, form.tmp, bird.tmp, birds, vars, variable.ind, bird.ind)
 
 # ---- univariate beta coefs ----
 
 birds <- sort(unique(abund.min40.lc$animal_jetz))
 
 univar_coefs <- tibble(bird = character(),
-                           variable = character(),
-                           beta.coefs = numeric())
+                       variable = character(),
+                       beta.coefs = numeric(),
+                       p.value = numeric()
+                       )
 
 vars <- colnames(abund.min40.lc[4:19])
 
@@ -385,6 +387,7 @@ for(var.ind in vars){
       bird = bird.ind,
       variable = names(coefficients(mod.tmp$finalModel)),
       beta.coefs = coefficients(mod.tmp$finalModel),
+      p.value = summary(mod.tmp)$coefficients[,4]
     )
     
     univar_coefs <- bind_rows(univar_coefs, univar_coefs_entry)
@@ -396,6 +399,18 @@ rm(bird.ind, univar_coefs_entry, mod.tmp, var.tmp, var.ind, bird.ind, vars, bird
 save(univar_coefs, file = "results/beta_coefs_univar_models.rda")
 
 # --- stats univar coefs ----
+
+length(unique(univar_coefs$bird))
+
+univar_coefs %>%
+  filter(
+    !(variable %in% "(Intercept)"),
+    str_detect(variable, "delta")
+  ) %>%
+  group_by(variable) %>%
+  mutate(p.val.adj = p.value*83) %>%
+  filter(p.val.adj <= 0.05) %>%
+  arrange(p.val.adj)
 
 tttt <- univar_coefs %>%
   na.omit() %>%

@@ -8,8 +8,6 @@ library(ggplot2)
 
 load("data/BBS.full.stable.min40.rda")
 
-load("data/")
-
 # ---- 
 
 init.commonness <- read_xlsx("/Users/jonwent/Desktop/ETHZ/master_thesis/Data/gcb16700-sup-0002-supinfo2.xlsx",

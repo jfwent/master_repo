@@ -1160,6 +1160,11 @@ ggsave(filename = "figures/LM_Results/beta_coef_selected.png", plot = beta_coef_
 
 # ---- other interesting beta coef plots ----
 
+#innov + cmi diff, +tmax, 
+# trophic level + delta swb
+# handwing + forest, + pasture
+# clutch plus pasture
+
 p1 <- coefs_tib %>%
   drop_na(delta.tmax.mean) %>%
   ggplot(aes(y = `delta.tmax.mean`, x = log(tot.innov+1))) +
