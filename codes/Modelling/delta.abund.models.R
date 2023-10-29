@@ -8,6 +8,15 @@ library(progress)
 
 # ==== with land cover vars -----
 # ---- LM function -----
+# 
+# ttt <- abund.min40.lc %>%
+#   filter(animal_jetz %in% "Petrochelidon_pyrrhonota") %>%
+#   filter(delta.abund >= -50) %>%
+#   filter(delta.abund <= 50)
+
+# abund.min40.lc <- abund.min40.lc %>%
+#   filter(!(animal_jetz %in% "Petrochelidon_pyrrhonota")) %>%
+#   bind_rows(ttt)
 
 birds <- unique(abund.min40.lc$animal_jetz)
 vars.all <- colnames(abund.min40.lc[4:19])

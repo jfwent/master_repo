@@ -42,7 +42,7 @@ coefs_tib <- univar_coefs %>%
 # ---- LMs ----
 
 traits <- colnames(species.traits[2:15])
-model_types <- colnames(adj_r2_lc_traits[19:21])
+model_types <- colnames(adj_r2_lc_traits[20:22])
 
 variance_models <- list()
 
@@ -89,7 +89,7 @@ rm(pb, train_control, trait_mods, trait.tmp, form.tmp, mod.types, model_types, t
 # ---- find p-values ----
 
 traits <- colnames(species.traits[2:15])
-model_types <- colnames(adj_r2_lc_traits[19:21])
+model_types <- colnames(adj_r2_lc_traits[20:22])
 
 trait_LM_res <- tibble(trait = character(),
                        model_type = character(),
@@ -207,10 +207,8 @@ beta_LM_res %>%
   arrange(p.val)
 
 beta_LM_res_adj <- beta_LM_res %>%
-  mutate(p.val.adj = p.val * length(p.val)) %>%
-  filter(p.val < 0.1) %>%
-  arrange(p.val.adj) %>%
-  filter(!(trait %in% c("ACAD.ind", "sauer.trend", "initial.abundance")))
+  mutate(p.val.adj = p.adjust(p.val, method = "BH")) %>%
+  arrange(p.val.adj)
 
 save(beta_LM_res, file = "results/traits_beta_coefs_LMs.rda")
 load("results/traits_beta_coefs_LMs.rda")

@@ -750,7 +750,7 @@ ggsave(pop_stacked, filename = "figures/LM_results/pop_trends_adj_r2_stacked.png
 load("results/traits_variance_LMs.rda")
 
 # ---- variance plots not stacked with continuous traits ----
-
+# ---- pace of life plot -----
 p1 <-
   adj_r2_lc_traits %>%
   drop_na(GenLength) %>%
@@ -823,6 +823,8 @@ life_history_plot_continuous
 ggsave(filename = "figures/LM_Results/life_hist_cont_plot.png", plot = life_history_plot_continuous,
        width = 8, height = 6, dpi = 300)
 
+
+# ---- generalism plot -----
 p4 <-
   adj_r2_lc_traits %>%
   drop_na(diet.breadth) %>%
@@ -891,6 +893,7 @@ ecol_traits_plot
 ggsave(filename = "figures/LM_Results/eco_traits_cont_plot.png", plot = ecol_traits_plot,
        width = 8, height = 6, dpi = 300)
 
+# ---- body size plot -----
 p6 <-
   adj_r2_lc_traits %>%
   drop_na(body.mass) %>%
@@ -914,7 +917,7 @@ p6 <-
   ylab(expression(paste("R"^2))) +
   theme_bw() +
   theme(
-    legend.position = "none",
+    # legend.position = "none",
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
@@ -922,12 +925,25 @@ p6 <-
   ) +
   ylim(-0.09,0.55)
 
+p6
+
+ggsave(filename = "figures/LM_Results/body_cont_plot.png", plot = p6,
+       width = 4, height = 6, dpi = 300)
+
+
+# ---- dispersal plot -----
 p7 <-
   adj_r2_lc_traits %>%
   drop_na(hand.wing.ind) %>%
   pivot_longer(cols = 20:22, values_to = "adj_r2", names_to = "mods") %>%
   relocate(adj_r2, mods) %>%
   ggplot(aes(y = adj_r2, x = hand.wing.ind, color = mods, fill = mods)) +
+  # scale_fill_manual(
+  #   values=c("grey90", "grey60","grey30"),
+  #   labels = c("Climate", "Full", "Land cover"),
+  #   aesthetics = c("color", "fill"),
+  #   guide = guide_legend(title = "Model")
+  # ) +
   scale_fill_viridis_d(
     aesthetics = c("color", "fill"),
     alpha = 0.6,
@@ -942,7 +958,7 @@ p7 <-
   ) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey40", linewidth = 0.8) +
   xlab("Hand-wind index") +
-  ylab("") +
+  ylab(expression(paste("R"^2))) +
   theme_bw() +
   theme(
     legend.position = "none",
@@ -953,6 +969,53 @@ p7 <-
   ) +
   ylim(-0.09,0.55)
 
+mig.plot <- adj_r2_lc_traits %>%
+  drop_na(Migrant) %>%
+  group_by(Migrant) %>%
+  summarize(mean.v.clim = mean(v.clim),
+            mean.v.lc = mean(v.lc),
+            mean.v.joint = mean(v.joint),
+            n_obs = n()) %>%
+  pivot_longer(!c(Migrant, n_obs), names_to = "variable", values_to = "variance") %>%
+  ggplot(aes(x = Migrant, y = variance,
+             # group = Migrant,
+             fill = variable)) +
+  geom_bar(position = "stack", stat = "identity",
+           color = "grey30", alpha = 0.6, size = 0.3) +
+  # ylab(expression(paste("R"^2))) +
+  ylab("")+
+  xlab("Migrant status") +
+  scale_fill_viridis_d(
+    aesthetics = c("fill"),
+    alpha = 0.3,
+    labels = c("Climate", "Full", "Land cover"),
+    guide = guide_legend(title = "Model"),
+    option = "H",
+  )+
+  # scale_fill_manual(values=c("grey100", "grey70","grey40"),
+  #                   labels = c("Climate", "Full", "Land cover")) +
+  labs(fill = "Model type")  +
+  geom_text(aes(label = n_obs),
+            stat = "count", vjust= -0.2, y = 0.01) +
+  ylim(-0.02,0.25) +
+  scale_x_discrete(breaks = levels(factor(adj_r2_lc_traits$Migrant)),
+                   labels = c("Full Migrant", "No Migrant")) +
+  theme_bw()+
+  theme(
+    panel.border = element_blank(),
+    # legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")
+
+disp_plot <- p7 + mig.plot
+disp_plot
+
+ggsave(filename = "figures/LM_Results/dispersal_cont_plot.png", plot = disp_plot,
+       width = 8, height = 6, dpi = 300)
+
+# ---- cognition plot -----
 p3 <-
   adj_r2_lc_traits %>%
   drop_na(rel_brain_size) %>%
@@ -986,12 +1049,58 @@ p3 <-
   ) +
   ylim(-0.09,0.55)
 
+p4 <-
+  adj_r2_lc_traits %>%
+  drop_na(tot.innov) %>%
+  pivot_longer(cols = 20:22, values_to = "adj_r2", names_to = "mods") %>%
+  relocate(adj_r2, mods) %>%
+  ggplot(aes(y = adj_r2, x = log(tot.innov+1), color = mods, fill = mods)) +
+  scale_fill_viridis_d(
+    aesthetics = c("color", "fill"),
+    alpha = 0.6,
+    labels = c("Climate", "Full", "Land cover"),
+    guide = guide_legend(title = "Model"),
+    option = "H",
+  ) +
+  # scale_fill_manual(
+  #   values=c("grey90", "grey60","grey30"),
+  #   labels = c("Climate", "Full", "Land cover"),
+  #   aesthetics = c("color", "fill"),
+  #   guide = guide_legend(title = "Model")
+  # ) +
+  geom_point(size = 2, alpha = 0.8) +
+  geom_smooth(method = "lm",
+              alpha = 0.6,
+              aes(fill = mods)
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey40", linewidth = 0.8) +
+  xlab("log(Innovativeness)") +
+  ylab(expression(paste("R"^2))) +
+  # ylab("")+
+  theme_bw() +
+  theme(
+    legend.position = "none",
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")
+  )
+
+cog_plot <- p4 + p3
+cog_plot
+
+ggsave(filename = "figures/LM_Results/cognition_cont_plot.png", plot = cog_plot,
+       width = 8, height = 6, dpi = 300)
+
+
 morph_traits_plot <- p6 + p7 + p3
 morph_traits_plot
 
 ggsave(filename = "figures/LM_Results/morph_traits_cont_plot.png", plot = morph_traits_plot,
        width = 8, height = 6, dpi = 300)
 
+
+# ---- abundance plot -----
 p8 <-
   adj_r2_lc_traits %>%
   drop_na(initial.abundance) %>%
@@ -1083,7 +1192,9 @@ p1 <- coefs_tib %>%
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black")) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
-  ylab("delta Tmin")
+  ylab(expression(beta * " coef. " * Delta * "Tmin"))
+
+p1
 
 p2 <- coefs_tib %>%
   filter(!(Trophic.Level %in% "Scavenger")) %>%
@@ -1102,7 +1213,7 @@ p2 <- coefs_tib %>%
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black")) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")  +
-  ylab("delta Grassland")
+  ylab(expression(beta * " coef. " * Delta * "Grassland"))
 
 p3 <- coefs_tib %>%
   drop_na(delta.tmin.mean) %>%
@@ -1118,7 +1229,7 @@ p3 <- coefs_tib %>%
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black")) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
-  ylab("delta Tmin")
+  ylab(expression(beta * " coef. " * Delta * "Tmin"))
 
 p4 <- coefs_tib %>%
   drop_na(delta.urban.area.m2.log) %>%
@@ -1134,7 +1245,7 @@ p4 <- coefs_tib %>%
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black")) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
-  ylab("delta Urban")
+  ylab(expression(beta * " coef. " * Delta * "Urban area"))
 
 # p4 <- coefs_tib %>%
 #   drop_na(delta.pasture.area.m2.log) %>%
@@ -1164,8 +1275,8 @@ ggsave(filename = "figures/LM_Results/beta_coef_selected.png", plot = beta_coef_
 # trophic level + delta swb
 # handwing + forest, + pasture
 # clutch plus pasture
-
-p1 <- coefs_tib %>%
+# ---- cog. beta plot ----
+innov_tmax <- coefs_tib %>%
   drop_na(delta.tmax.mean) %>%
   ggplot(aes(y = `delta.tmax.mean`, x = log(tot.innov+1))) +
   geom_point(size = 2, alpha = 0.5) +
@@ -1179,9 +1290,9 @@ p1 <- coefs_tib %>%
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black")) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
-  ylab("delta Tmax")
+  ylab(expression(beta * " coef. " * Delta * "Tmax"))
 
-p2 <- coefs_tib %>%
+innov_cmi <- coefs_tib %>%
   drop_na(delta.cmi.diff.mean) %>%
   ggplot(aes(y = `delta.cmi.diff.mean`, x = log(tot.innov+1))) +
   geom_point(size = 2, alpha = 0.5) +
@@ -1195,11 +1306,11 @@ p2 <- coefs_tib %>%
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black")) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
-  ylab("delta CMI diff.")
+  ylab(expression(beta * " coef. " * Delta * "CMI diff."))
 
-p3 <- coefs_tib %>%
-  drop_na(delta.pasture.area.m2.log) %>%
-  ggplot(aes(y = `delta.pasture.area.m2.log`, x = log(tot.innov+1))) +
+innov_grass <- coefs_tib %>%
+  drop_na(delta.grass.area.m2.log) %>%
+  ggplot(aes(y = `delta.grass.area.m2.log`, x = log(tot.innov+1))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
   xlab("log(Innovations)")+
@@ -1211,25 +1322,73 @@ p3 <- coefs_tib %>%
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black")) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
-  ylab("delta Pasture")
+  ylab(expression(beta * " coef. " * Delta * "Grassland"))
 
-# p4 <- coefs_tib %>%
-#   drop_na(delta.cmi.diff.mean) %>%
-#   ggplot(aes(y = `delta.cmi.diff.mean`, x = diet.breadth)) +
-#   geom_point(size = 2, alpha = 0.5) +
-#   geom_smooth(method = "lm") +
-#   xlab("Diet breadth")+
-#   theme_bw() +
-#   theme(
-#     panel.border = element_blank(),
-#     legend.position = "none",
-#     panel.grid.major = element_blank(),
-#     panel.grid.minor = element_blank(),
-#     axis.line = element_line(color = "black")) +
-#   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
-#   ylab("delta CMI diff.")
+innov_swb <- coefs_tib %>%
+  drop_na(delta.swb.mean) %>%
+  ggplot(aes(y = `delta.swb.mean`, x = log(tot.innov+1))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Innovations)")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "SWB"))
 
-p5 <- coefs_tib %>%
+innov_tmax
+innov_cmi
+innov_swb
+innov_grass
+
+brain_tmax <- coefs_tib %>%
+  drop_na(delta.tmax.mean) %>%
+  ggplot(aes(y = `delta.tmax.mean`, x = rel_brain_size)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Rel. brain size")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab("delta Tmax")
+
+brain_swb <- coefs_tib %>%
+  drop_na(delta.swb.mean) %>%
+  ggplot(aes(y = `delta.swb.mean`, x = rel_brain_size)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Rel. brain size")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "SWB"))
+
+brain_tmax
+brain_swb
+
+cog_beta <- brain_tmax + innov_tmax + brain_swb + innov_cmi
+cog_beta
+
+ggsave(filename = "figures/LM_Results/cog_beta_plot.png", plot = cog_beta,
+       width = 8, height = 6, dpi = 300)
+
+# ---- troph beta plot ----
+
+troph_swb <- coefs_tib %>%
   filter(!(Trophic.Level %in% "Scavenger")) %>%
   drop_na(delta.swb.mean) %>%
   drop_na(Trophic.Level) %>%
@@ -1246,8 +1405,80 @@ p5 <- coefs_tib %>%
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black")) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")  +
-  ylab("delta SWB")
+  ylab(expression(beta * " coef. " * Delta * "SWB"))
 
+troph_grass <- coefs_tib %>%
+  filter(!(Trophic.Level %in% "Scavenger")) %>%
+  drop_na(delta.grass.area.m2.log) %>%
+  drop_na(Trophic.Level) %>%
+  ggplot(aes(y = `delta.grass.area.m2.log`, x = Trophic.Level)) +
+  geom_boxplot() +
+  xlab("Trophic Level") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= 0.5, y = -1) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")  +
+  ylab(expression(beta * " coef. " * Delta * "Grassland"))
+
+troph_grass
+troph_swb
+
+niche_swb <- coefs_tib %>%
+  group_by(Trophic.Niche) %>%
+  mutate(n_obs = n()) %>%
+  filter(n_obs > 5) %>%
+  filter(!(Trophic.Niche %in% "Scavenger")) %>%
+  drop_na(delta.swb.mean) %>%
+  drop_na(Trophic.Niche) %>%
+  ggplot(aes(y = `delta.swb.mean`, x = Trophic.Niche)) +
+  geom_boxplot() +
+  xlab("Trophic Niche") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= 0.5, y = 4) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")  +
+  ylab(expression(beta * " coef. " * Delta * "SWB"))
+
+niche_grass <- coefs_tib %>%
+  group_by(Trophic.Niche) %>%
+  mutate(n_obs = n()) %>%
+  filter(n_obs > 5) %>%
+  filter(!(Trophic.Niche %in% "Scavenger")) %>%
+  drop_na(delta.grass.area.m2.log) %>%
+  drop_na(Trophic.Niche) %>%
+  ggplot(aes(y = `delta.grass.area.m2.log`, x = Trophic.Niche)) +
+  geom_boxplot() +
+  xlab("Trophic Niche") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= 0.5, y = -1) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")  +
+  ylab(expression(beta * " coef. " * Delta * "Grassland"))
+
+niche_grass
+niche_swb
+
+
+
+# ---- generalism beta plot ----
 diet_beta_plot <- p1 + p2 + p3 + p5
 diet_beta_plot
 
@@ -1336,12 +1567,12 @@ p1 <- coefs_tib %>%
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
   ylab("delta Pasture")
 
-p2 <- coefs_tib %>%
-  drop_na(delta.tmax.mean) %>%
-  ggplot(aes(y = `delta.tmax.mean`, x = rel_brain_size)) +
+clutch_urb <- coefs_tib %>%
+  drop_na(delta.urban.area.m2.log) %>%
+  ggplot(aes(y = `delta.urban.area.m2.log`, x = Clutch.Bird)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  xlab("Rel. brain size")+
+  xlab("Clutch size")+
   theme_bw() +
   theme(
     panel.border = element_blank(),
@@ -1350,7 +1581,23 @@ p2 <- coefs_tib %>%
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black")) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
-  ylab("delta Tmax")
+  ylab(expression(beta * " coef. " * Delta * "Urban area"))
+
+gen_tmax <- coefs_tib %>%
+  drop_na(delta.tmax.mean) %>%
+  ggplot(aes(y = `delta.tmax.mean`, x = log(GenLength))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Gen. length)")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "Tmax"))
 
 beta_life_hist_plot <- p1 + p2
 beta_life_hist_plot
