@@ -1359,7 +1359,7 @@ brain_tmax <- coefs_tib %>%
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black")) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
-  ylab("delta Tmax")
+  ylab(expression(beta * " coef. " * Delta * "Tmax"))
 
 brain_swb <- coefs_tib %>%
   drop_na(delta.swb.mean) %>%
@@ -1377,10 +1377,27 @@ brain_swb <- coefs_tib %>%
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
   ylab(expression(beta * " coef. " * Delta * "SWB"))
 
+brain_cmi <- coefs_tib %>%
+  drop_na(delta.cmi.diff.mean) %>%
+  ggplot(aes(y = `delta.cmi.diff.mean`, x = rel_brain_size)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Rel. brain size")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "CMI diff."))
+
 brain_tmax
 brain_swb
+brain_cmi
 
-cog_beta <- brain_tmax + innov_tmax + brain_swb + innov_cmi
+cog_beta <- brain_tmax + innov_tmax + brain_cmi + innov_cmi
 cog_beta
 
 ggsave(filename = "figures/LM_Results/cog_beta_plot.png", plot = cog_beta,
@@ -1462,7 +1479,7 @@ niche_grass <- coefs_tib %>%
   geom_boxplot() +
   xlab("Trophic Niche") +
   geom_text(aes(label = ..count..),
-            stat = "count", vjust= 0.5, y = -1) +
+            stat = "count", vjust= 0.5, y = 1) +
   theme_bw() +
   theme(
     panel.border = element_blank(),
@@ -1476,13 +1493,15 @@ niche_grass <- coefs_tib %>%
 niche_grass
 niche_swb
 
+troph_beta_plot <- troph_grass + niche_grass + troph_swb + niche_swb
+troph_beta_plot
 
+ggsave(filename = "figures/LM_Results/trophic_beta_plot.png", plot = troph_beta_plot,
+       width = 8, height = 6, dpi = 300)
 
-# ---- generalism beta plot ----
-diet_beta_plot <- p1 + p2 + p3 + p5
-diet_beta_plot
+# ---- dispersal beta plot ----
 
-p1 <- coefs_tib %>%
+mig_tmax <- coefs_tib %>%
   drop_na(delta.tmax.mean) %>%
   drop_na(Migrant) %>%
   ggplot(aes(y = `delta.tmax.mean`, x = Migrant)) +
@@ -1498,9 +1517,27 @@ p1 <- coefs_tib %>%
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black")) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")  +
-  ylab("delta Tmax")
+  ylab(expression(beta * " coef. " * Delta * "Tmax"))
 
-p4 <- coefs_tib %>%
+mig_tmin <- coefs_tib %>%
+  drop_na(delta.tmin.mean) %>%
+  drop_na(Migrant) %>%
+  ggplot(aes(y = `delta.tmin.mean`, x = Migrant)) +
+  geom_boxplot() +
+  xlab("Migrant") +
+  geom_text(aes(label = ..count..),
+            stat = "count", vjust= -0.2, y = 2) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30")  +
+  ylab(expression(beta * " coef. " * Delta * "Tmin"))
+
+hwi_pasture <- coefs_tib %>%
   drop_na(delta.pasture.area.m2.log) %>%
   ggplot(aes(y = `delta.pasture.area.m2.log`, x = hand.wing.ind)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -1516,7 +1553,7 @@ p4 <- coefs_tib %>%
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
   ylab("delta Pasture")
 
-p3 <- coefs_tib %>%
+hwi_forest <- coefs_tib %>%
   drop_na(delta.forest.area.m2.log) %>%
   ggplot(aes(y = `delta.forest.area.m2.log`, x = hand.wing.ind)) +
   geom_point(size = 2, alpha = 0.5) +
@@ -1532,12 +1569,12 @@ p3 <- coefs_tib %>%
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
   ylab("delta Forest")
 
-p2 <- coefs_tib %>%
+hwi_tmin<- coefs_tib %>%
   drop_na(delta.tmin.mean) %>%
-  ggplot(aes(y = `delta.tmin.mean`, x = hand.wing.ind)) +
+  ggplot(aes(y = `delta.tmin.mean`, x = log(hand.wing.ind))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
-  xlab("Hand-wing ind.")+
+  xlab("log(Hand-wing ind.)")+
   theme_bw() +
   theme(
     panel.border = element_blank(),
@@ -1546,13 +1583,180 @@ p2 <- coefs_tib %>%
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black")) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
-  ylab("delta Tmin")
+  ylab(expression(beta * " coef. " * Delta * "Tmin"))
 
-dispersal_beta_plot <- p1+p2+p3+p4
+hwi_tmax <- coefs_tib %>%
+  drop_na(delta.tmax.mean) %>%
+  ggplot(aes(y = `delta.tmax.mean`, x = log(hand.wing.ind))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Hand-wing ind.)")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "Tmax"))
+
+dispersal_beta_plot <- hwi_tmin + mig_tmin
 dispersal_beta_plot
 
-p1 <- coefs_tib %>%
-  drop_na(delta.pasture.area.m2.log) %>%
+ggsave(filename = "figures/LM_Results/disp_beta_plot.png", plot = dispersal_beta_plot,
+       width = 8, height = 6, dpi = 300)
+
+# ---- generalism beta plot ----
+
+diet_tmin <- coefs_tib %>%
+  drop_na(diet.breadth) %>%
+  ggplot(aes(y = delta.tmin.mean, x = diet.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm", linetype = "dotdash") +
+  xlab("Diet breadth")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "Tmin"))
+
+diet_cmi <- coefs_tib %>%
+  drop_na(diet.breadth) %>%
+  ggplot(aes(y = delta.cmi.diff.mean, x = diet.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Diet breadth")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "CMI diff."))
+
+diet_forest <- coefs_tib %>%
+  drop_na(diet.breadth) %>%
+  ggplot(aes(y = delta.forest.area.m2.log, x = diet.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Diet breadth")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "Forest area"))
+
+hab_tmin <- coefs_tib %>%
+  drop_na(hab.breadth) %>%
+  ggplot(aes(y = delta.tmin.mean, x = hab.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Habitat breadth")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "Tmin"))
+
+hab_cmi <- coefs_tib %>%
+  drop_na(hab.breadth) %>%
+  ggplot(aes(y = delta.cmi.diff.mean, x = hab.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Habitat breadth")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "CMI diff."))
+
+hab_forest <- coefs_tib %>%
+  drop_na(hab.breadth) %>%
+  ggplot(aes(y = delta.forest.area.m2.log, x = hab.breadth)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Habitat breadth")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "Forest area"))
+
+
+generalism_beta_plot <- diet_tmin + hab_tmin + diet_forest + hab_forest
+generalism_beta_plot
+
+ggsave(filename = "figures/LM_Results/generalism_beta_plot.png", plot = generalism_beta_plot,
+       width = 8, height = 6, dpi = 300)
+
+
+# ---- body beta plot ----
+
+body_tmin <- coefs_tib %>%
+  drop_na(body.mass) %>%
+  ggplot(aes(y = delta.tmin.mean, x = log(body.mass))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Body mass)")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "Tmin"))
+
+body_tmax <- coefs_tib %>%
+  drop_na(body.mass) %>%
+  ggplot(aes(y = delta.tmax.mean, x = log(body.mass))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Body mass)")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "Tmax"))
+
+body_beta <- body_tmax + body_tmin
+body_beta
+
+ggsave(filename = "figures/LM_Results/body_beta_plot.png", plot = body_beta,
+       width = 8, height = 6, dpi = 300)
+
+# ---- pace of life beta plot ----
+
+clutch_past <- coefs_tib %>%
+  drop_na(Clutch.Bird) %>%
   ggplot(aes(y = `delta.pasture.area.m2.log`, x = Clutch.Bird)) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
@@ -1566,6 +1770,22 @@ p1 <- coefs_tib %>%
     axis.line = element_line(color = "black")) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
   ylab("delta Pasture")
+
+clutch_swb <- coefs_tib %>%
+  drop_na(Clutch.Bird) %>%
+  ggplot(aes(y = delta.swb.mean, x = Clutch.Bird)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Clutch size")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "SWB"))
 
 clutch_urb <- coefs_tib %>%
   drop_na(delta.urban.area.m2.log) %>%
@@ -1583,8 +1803,24 @@ clutch_urb <- coefs_tib %>%
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
   ylab(expression(beta * " coef. " * Delta * "Urban area"))
 
+clutch_tmax <- coefs_tib %>%
+  drop_na(Clutch.Bird) %>%
+  ggplot(aes(y = delta.tmax.mean, x = Clutch.Bird)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Clutch size")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "Tmax"))
+
 gen_tmax <- coefs_tib %>%
-  drop_na(delta.tmax.mean) %>%
+  drop_na(GenLength) %>%
   ggplot(aes(y = `delta.tmax.mean`, x = log(GenLength))) +
   geom_point(size = 2, alpha = 0.5) +
   geom_smooth(method = "lm") +
@@ -1599,42 +1835,162 @@ gen_tmax <- coefs_tib %>%
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
   ylab(expression(beta * " coef. " * Delta * "Tmax"))
 
-beta_life_hist_plot <- p1 + p2
-beta_life_hist_plot
+gen_urb <- coefs_tib %>%
+  drop_na(GenLength) %>%
+  ggplot(aes(y = `delta.urban.area.m2.log`, x = log(GenLength))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Gen. length)")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "Urban area"))
 
-# ---- save beta coef plots ----
+gen_swb <- coefs_tib %>%
+  drop_na(GenLength) %>%
+  ggplot(aes(y = delta.swb.mean, x = log(GenLength))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(Gen. length)")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "SWB"))
 
-ggsave(filename = "figures/LM_Results/beta_life_hist.png", plot = beta_life_hist_plot,
-              width = 8, height = 6, dpi = 300)
+ttt <- clutch_swb+gen_swb
+ttt
 
-ggsave(filename = "figures/LM_Results/beta_diet.png", plot = diet_beta_plot,
+life_beta_plot <- gen_tmax + clutch_tmax  + gen_swb + clutch_swb
+life_beta_plot
+
+ggsave(filename = "figures/LM_Results/life_hist_beta_plot.png", plot = life_beta_plot,
        width = 8, height = 6, dpi = 300)
 
-ggsave(filename = "figures/LM_Results/beta_dispersal.png", plot = dispersal_beta_plot,
-       width = 8, height = 6, dpi = 300)
+# ---- abund beta plot ----
 
-# ggsave(filename = "figures/LM_Results/beta_coef_wing_climate.png", plot = coef_plot_wing_climate,
-#        width = 8, height = 6, dpi = 300)
-# ggsave(filename = "figures/LM_Results/beta_coef_wing_landcover.png", plot = coef_plot_wing_landcover,
-#        width = 8, height = 6, dpi = 300)
-# ggsave(filename = "figures/LM_Results/beta_coef_diet_climate.png", plot = coef_plot_diet_climate,
-#        width = 8, height = 6, dpi = 300)
-# ggsave(filename = "figures/LM_Results/beta_coef_diet_landcover.png", plot = coef_plot_diet_landcover,
-#        width = 8, height = 6, dpi = 300)
-# ggsave(filename = "figures/LM_Results/beta_coef_gen_length_climate.png", plot = coef_plot_gen_length_climate,
-#        width = 8, height = 6, dpi = 300)
-# ggsave(filename = "figures/LM_Results/beta_coef_gen_length_landcover.png", plot = coef_plot_gen_length_landcover,
-#        width = 8, height = 6, dpi = 300)
-# ggsave(filename = "figures/LM_Results/beta_coef_innovations_climate.png", plot = coef_plot_innov_climate,
-#        width = 8, height = 6, dpi = 300)
-# ggsave(filename = "figures/LM_Results/beta_coef_innovations_landcover.png", plot = coef_plot_innov_landcover,
-#        width = 8, height = 6, dpi = 300)
-# ggsave(filename = "figures/LM_Results/beta_coef_migrant_climate.png", plot = coef_plot_migrant_climate,
-#        width = 8, height = 6, dpi = 300)
-# ggsave(filename = "figures/LM_Results/beta_coef_migrant_landcover.png", plot = coef_plot_migrant_landcover,
-#        width = 8, height = 6, dpi = 300)
-# ggsave(filename = "figures/LM_Results/beta_coef_abund.png", plot = coef_plot_abund,
-#        width = 8, height = 6, dpi = 300)
+# abund - tmax
+# abund - swb/cmi
+
+# sauer - urban
+# sauer - tmax
+
+abund_tmax <- coefs_tib %>%
+  drop_na(initial.abundance) %>%
+  ggplot(aes(y = delta.tmax.mean, x = log(initial.abundance))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(abund.)")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "Tmax"))
+
+abund_swb <- coefs_tib %>%
+  drop_na(initial.abundance) %>%
+  ggplot(aes(y = delta.swb.mean, x = log(initial.abundance))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(abund.)")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "SWB"))
+
+abund_urb <- coefs_tib %>%
+  drop_na(initial.abundance) %>%
+  ggplot(aes(y = delta.urban.area.m2.log, x = log(initial.abundance))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("log(abund.)")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "Urban area"))
+
+sauer_urb <- coefs_tib %>%
+  drop_na(sauer.trend) %>%
+  ggplot(aes(y = delta.urban.area.m2.log, x = sauer.trend)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Pop. trend (Sauer)")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "Urban area"))
+
+sauer_tmax <- coefs_tib %>%
+  drop_na(sauer.trend) %>%
+  ggplot(aes(y = delta.tmax.mean, x = sauer.trend)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Pop. trend (Sauer)")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "Tmax"))
+
+sauer_swb <- coefs_tib %>%
+  drop_na(sauer.trend) %>%
+  ggplot(aes(y = delta.swb.mean, x = sauer.trend)) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  xlab("Pop. trend (Sauer)")+
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
+  ylab(expression(beta * " coef. " * Delta * "SWB"))
+
+ttt <- abund_swb+sauer_swb
+ttt
+
+abund_beta <- abund_tmax + sauer_tmax
+  # abund_urb + sauer_urb
+  # abund_swb+sauer_swb
+
+abund_beta
+
+ggsave(filename = "figures/LM_Results/abund_beta_plot.png", plot = abund_beta,
+       width = 8, height = 6, dpi = 300)
 
 # ===== Old ----
 # ---- beta coefs vs traits plots ----
